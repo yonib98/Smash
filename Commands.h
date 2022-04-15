@@ -6,7 +6,7 @@
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
 class Command {
-  char* cmd_line;
+std::string cmd_line;
 // TODO: Add your data members
  public:
   Command(const char* cmd_line);
@@ -48,8 +48,16 @@ class RedirectionCommand : public Command {
   //void cleanup() override;
 };
 
+class ChangePromptCommand: public BuiltInCommand {
+  std::string prompt;
+ public:
+  ChangePromptCommand(const char* cmd_line);
+  virtual ~ChangePromptCommand() {}
+  void execute() override;
+};
 class ChangeDirCommand : public BuiltInCommand {
 // TODO: Add your data members public:
+ public:
   ChangeDirCommand(const char* cmd_line, char** plastPwd);
   virtual ~ChangeDirCommand() {}
   void execute() override;
@@ -164,6 +172,7 @@ class SmallShell {
   ~SmallShell();
   void executeCommand(const char* cmd_line);
   void setPrompt(std::string prompt);
+  std::string getPrompt();
 };
 
 #endif //SMASH_COMMAND_H_

@@ -89,15 +89,18 @@ SmallShell::SmallShell(): prompt("Smash") {
 SmallShell::~SmallShell() {
 // TODO: add your implementation
 }
-SmallShell::setPrompt(string prompt){
+void SmallShell::setPrompt(string prompt){
   this->prompt=prompt;
+}
+string SmallShell::getPrompt(){
+  return this->prompt;
 }
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
 Command * SmallShell::CreateCommand(const char* cmd_line) {
 	// For example:
-/*
+
   string cmd_s = _trim(string(cmd_line));
   string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
 
@@ -107,38 +110,69 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
   else if (firstWord.compare("showpid") == 0) {
     return new ShowPidCommand(cmd_line);
   }
-  else if ...
-  .....
+  else if (firstWord.compare("chprompt")==0){
+    return new ChangePromptCommand(cmd_line);
+
+  }
+ // else if ...
+ // .....
   else {
     return new ExternalCommand(cmd_line);
   }
-  */
+  
   return nullptr;
 }
 
 void SmallShell::executeCommand(const char *cmd_line) {
   // TODO: Add your implementation here
   // for example:
-  // Command* cmd = CreateCommand(cmd_line);
-  // cmd->execute();
+  Command* cmd = CreateCommand(cmd_line);
+  cmd->execute();
   // Please note that you must fork smash process for some commands (e.g., external commands....)
 }
 
+
+//Constructors
 Command::Command(const char* cmd_line): cmd_line(cmd_line){   
-  std::cout << "new command" << std::endl;
 }
 BuiltInCommand::BuiltInCommand(const char* cmd_line): Command(cmd_line) {};
 ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {};
-GetCurrDirCommand::GetCurrDirCommand(const char* cmd_line): Command(cmd_line) {};
-ShowPidCommand::ShowPidCommand(const char* cmd_line): Command(cmd_line){};
 
+//BuiltIns C'tor
+GetCurrDirCommand::GetCurrDirCommand(const char* cmd_line): BuiltInCommand(cmd_line) {};
+ShowPidCommand::ShowPidCommand(const char* cmd_line): BuiltInCommand(cmd_line){};
+ChangePromptCommand::ChangePromptCommand(const char* cmd_line): BuiltInCommand(cmd_line) {
+    char** args = (char**)malloc(sizeof(char*)*COMMAND_MAX_ARGS);
+    int len =_parseCommandLine(cmd_line,args);
+    if(len==1){
+      prompt="Smash";
+    }else{
+      prompt=args[1];
+    }
+    free(args);
+
+};
+
+//Destructors
+Command::~Command(){
+}
 //Executes:
 
 void GetCurrDirCommand::execute(){
-  string pwd = getcwd();
+  char buff[1024];
+   getcwd(buff,1024);
+   string pwd = string(buff);
   std::cout << pwd << std::endl;
 }
 void ShowPidCommand::execute(){
   int pid = getpid();
   std::cout << "Smash pid is " << pid << std::endl;
+}
+void ChangePromptCommand::execute(){
+    SmallShell& smash = SmallShell::getInstance();
+    smash.setPrompt(prompt);
+
+}
+void ExternalCommand::execute(){
+  std::cout << "external " << std::endl;
 }
