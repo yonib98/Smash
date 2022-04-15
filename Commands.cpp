@@ -82,14 +82,16 @@ void _removeBackgroundSign(char* cmd_line) {
 
 // TODO: Add your implementation for classes in Commands.h 
 
-SmallShell::SmallShell() {
+SmallShell::SmallShell(): prompt("Smash") {
 // TODO: add your implementation
 }
 
 SmallShell::~SmallShell() {
 // TODO: add your implementation
 }
-
+SmallShell::setPrompt(string prompt){
+  this->prompt=prompt;
+}
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
@@ -120,4 +122,23 @@ void SmallShell::executeCommand(const char *cmd_line) {
   // Command* cmd = CreateCommand(cmd_line);
   // cmd->execute();
   // Please note that you must fork smash process for some commands (e.g., external commands....)
+}
+
+Command::Command(const char* cmd_line): cmd_line(cmd_line){   
+  std::cout << "new command" << std::endl;
+}
+BuiltInCommand::BuiltInCommand(const char* cmd_line): Command(cmd_line) {};
+ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {};
+GetCurrDirCommand::GetCurrDirCommand(const char* cmd_line): Command(cmd_line) {};
+ShowPidCommand::ShowPidCommand(const char* cmd_line): Command(cmd_line){};
+
+//Executes:
+
+void GetCurrDirCommand::execute(){
+  string pwd = getcwd();
+  std::cout << pwd << std::endl;
+}
+void ShowPidCommand::execute(){
+  int pid = getpid();
+  std::cout << "Smash pid is " << pid << std::endl;
 }

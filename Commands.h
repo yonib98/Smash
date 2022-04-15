@@ -2,11 +2,11 @@
 #define SMASH_COMMAND_H_
 
 #include <vector>
-
+#include <string>
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
-
 class Command {
+  char* cmd_line;
 // TODO: Add your data members
  public:
   Command(const char* cmd_line);
@@ -149,7 +149,7 @@ class TouchCommand : public BuiltInCommand {
 
 class SmallShell {
  private:
-  // TODO: Add your data members
+  std::string prompt; 
   SmallShell();
  public:
   Command *CreateCommand(const char* cmd_line);
@@ -163,7 +163,7 @@ class SmallShell {
   }
   ~SmallShell();
   void executeCommand(const char* cmd_line);
-  // TODO: add extra methods as needed
+  void setPrompt(std::string prompt);
 };
 
 #endif //SMASH_COMMAND_H_
