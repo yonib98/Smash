@@ -82,12 +82,12 @@ void _removeBackgroundSign(char* cmd_line) {
 
 // TODO: Add your implementation for classes in Commands.h 
 
-SmallShell::SmallShell(): prompt("Smash") {
+SmallShell::SmallShell(): prompt("smash"), plastpwd(nullptr){
 // TODO: add your implementation
 }
 
 SmallShell::~SmallShell() {
-// TODO: add your implementation
+  delete [] plastpwd;
 }
 void SmallShell::setPrompt(string prompt){
   this->prompt=prompt;
@@ -103,18 +103,19 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
 
   string cmd_s = _trim(string(cmd_line));
   string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
-
-  if (firstWord.compare("pwd") == 0) {
+  if (firstWord.compare("pwd") == 0 || firstWord.compare("pwd&") == 0) {
     return new GetCurrDirCommand(cmd_line);
   }
-  else if (firstWord.compare("showpid") == 0) {
+  else if (firstWord.compare("showpid") == 0 || firstWord.compare("showpid&")==0) {
     return new ShowPidCommand(cmd_line);
   }
-  else if (firstWord.compare("chprompt")==0){
+  else if (firstWord.compare("chprompt")==0 || firstWord.compare("chprompt&")==0){
     return new ChangePromptCommand(cmd_line);
-
   }
- // else if ...
+  else if (firstWord.compare("cd")==0 || firstWord.compare("cd&")==0){
+    return new ChangeDirCommand(cmd_line, &this->plastpwd);
+    
+  } 
  // .....
   else {
     return new ExternalCommand(cmd_line);
@@ -139,18 +140,45 @@ BuiltInCommand::BuiltInCommand(const char* cmd_line): Command(cmd_line) {};
 ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {};
 
 //BuiltIns C'tor
+ChangeDirCommand::ChangeDirCommand (const char* cmd_line, char** plastPwd): BuiltInCommand(cmd_line){
+  char** args = new char*[COMMAND_MAX_ARGS];
+  int len =_parseCommandLine(cmd_line,args);
+  if(len>2){
+    throw exception(); //MORE THAN ONE ARG
+  }
+  if(len==0){
+    throw exception(); //NO ARGS
+  }
+  else{
+    char* path = args[1];
+    if(strcmp(path,"-")==0){
+      if(*plastPwd==nullptr){
+        throw exception(); //OLDPWD_NOTSET
+    }
+        next_pwd=*plastPwd;
+    }
+    else{
+      next_pwd = path;
+    }
+    if(*plastPwd==nullptr){
+      *plastPwd= new char[1024];
+    }
+    getcwd(*plastPwd,1024);
+ }
+  
+  delete [] args;
+}
 GetCurrDirCommand::GetCurrDirCommand(const char* cmd_line): BuiltInCommand(cmd_line) {};
 ShowPidCommand::ShowPidCommand(const char* cmd_line): BuiltInCommand(cmd_line){};
 ChangePromptCommand::ChangePromptCommand(const char* cmd_line): BuiltInCommand(cmd_line) {
-    char** args = (char**)malloc(sizeof(char*)*COMMAND_MAX_ARGS);
+    char** args = new char*[COMMAND_MAX_ARGS];
     int len =_parseCommandLine(cmd_line,args);
     if(len==1){
-      prompt="Smash";
+      prompt="smash";
     }else{
       prompt=args[1];
     }
-    free(args);
-
+    delete [] args;
 };
 
 //Destructors
@@ -164,15 +192,25 @@ void GetCurrDirCommand::execute(){
    string pwd = string(buff);
   std::cout << pwd << std::endl;
 }
+
+void ChangeDirCommand::execute(){
+  int result = chdir(next_pwd.c_str());
+  if(result==-1){
+    throw exception(); //CHDIR failed
+  }
+}
+
 void ShowPidCommand::execute(){
   int pid = getpid();
   std::cout << "Smash pid is " << pid << std::endl;
 }
+
 void ChangePromptCommand::execute(){
     SmallShell& smash = SmallShell::getInstance();
     smash.setPrompt(prompt);
 
 }
+
 void ExternalCommand::execute(){
   std::cout << "external " << std::endl;
 }

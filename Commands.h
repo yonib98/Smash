@@ -57,6 +57,7 @@ class ChangePromptCommand: public BuiltInCommand {
 };
 class ChangeDirCommand : public BuiltInCommand {
 // TODO: Add your data members public:
+ std::string next_pwd;
  public:
   ChangeDirCommand(const char* cmd_line, char** plastPwd);
   virtual ~ChangeDirCommand() {}
@@ -117,7 +118,7 @@ class JobsCommand : public BuiltInCommand {
 };
 
 class KillCommand : public BuiltInCommand {
- // TODO: Add your data members
+ // TODO: Add your data members 
  public:
   KillCommand(const char* cmd_line, JobsList* jobs);
   virtual ~KillCommand() {}
@@ -158,6 +159,7 @@ class TouchCommand : public BuiltInCommand {
 class SmallShell {
  private:
   std::string prompt; 
+  char* plastpwd;
   SmallShell();
  public:
   Command *CreateCommand(const char* cmd_line);
