@@ -1,13 +1,13 @@
-#ifndef SMASH_COMMAND_H_
+ #ifndef SMASH_COMMAND_H_
 #define SMASH_COMMAND_H_
 
-#include <vector>
+#include <list>
 #include <string>
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
 class Command {
 std::string cmd_line;
-// TODO: Add your data members
+friend class JobsList;
  public:
   Command(const char* cmd_line);
   virtual ~Command();
@@ -24,9 +24,10 @@ class BuiltInCommand : public Command {
 };
 
 class ExternalCommand : public Command {
+  char** argv;
  public:
   ExternalCommand(const char* cmd_line);
-  virtual ~ExternalCommand() {}
+  virtual ~ExternalCommand();
   void execute() override;
 };
 
@@ -90,15 +91,28 @@ class QuitCommand : public BuiltInCommand {
 
 
 class JobsList {
- public:
+  public:
   class JobEntry {
+    Command* cmd;
+    int job_id;
+    int pid;
+    bool isStopped;
+    bool isFinished;
+    time_t start_time;
+    public:
+    JobEntry(Command* cmd, time_t start_time, int job_id,int pid, bool isStopped=false): cmd(cmd), job_id(job_id),pid(pid), isStopped(isStopped), isFinished(false), start_time(start_time) {};
+    friend class JobsList;
    // TODO: Add your data members
   };
+  private:
+  std::list<JobEntry> allJobs;
+  std::list<JobEntry> stoppedJobs;
+  int max_job_id;
  // TODO: Add your data members
  public:
   JobsList();
   ~JobsList();
-  void addJob(Command* cmd, bool isStopped = false);
+  void addJob(Command* cmd, int pid, bool isStopped = false);
   void printJobsList();
   void killAllJobs();
   void removeFinishedJobs();
