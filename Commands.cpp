@@ -354,7 +354,6 @@ void ForegroundCommand::execute(){
   waitpid(pid,&status,WUNTRACED);
   smash.setRunningPid(-1);
   smash.setRunningProcess("");
-  waitpid(pid, &status, WUNTRACED);
 }
 
 void BackgroundCommand::execute(){
@@ -407,6 +406,11 @@ void JobsList::removeJobById(int jobId){
     stoppedJobs.remove(getJobById(jobId));
   }
   allJobs.remove(getJobById(jobId));
+  if(allJobs.empty()){
+    max_job_id=0;
+  }else{
+  max_job_id=allJobs.back()->job_id;
+  }
 }
 
 void JobsList::removeJobFromStoppedJobs(int jobId){
