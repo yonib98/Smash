@@ -263,7 +263,7 @@ BackgroundCommand::BackgroundCommand(const char* cmd_line,JobsList* jobs): Built
       }   
       pid= job->pid;
       cmd = job->cmd_line;
-      jobs(->jobFromStoppedJobs(job->job_id);   
+      jobs->removeJobFromStoppedJobs(job->job_id);   
     }
     else{
       job_id = atoi(args[1]);
@@ -271,12 +271,11 @@ BackgroundCommand::BackgroundCommand(const char* cmd_line,JobsList* jobs): Built
      try{
         job=jobs->getJobById(job_id);
      }
-     catch{
- (std::exception& e)       //job id does not exist;
-     }
+     catch(std::exception& e){
+
+     }       //job id does not exist;
       if(!job->isStopped){
         throw std::exception();//job is already in the background
-
       }   
       pid = job->pid;
       cmd = job->cmd_line;
