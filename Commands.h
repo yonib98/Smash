@@ -106,6 +106,8 @@ class JobsList {
     friend class JobsList;
     friend class ForegroundCommand;
     friend class BackgroundCommand;
+    friend class KillCommand;
+    friend class QuitCommand;
    // TODO: Add your data members
   };
   private:
@@ -138,7 +140,8 @@ class JobsCommand : public BuiltInCommand {
 };
 
 class KillCommand : public BuiltInCommand {
- // TODO: Add your data members 
+  int signum;
+  int pid;
  public:
   KillCommand(const char* cmd_line, JobsList* jobs);
   virtual ~KillCommand() {}

@@ -130,6 +130,9 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
   else if(firstWord.compare("bg") == 0 || firstWord.compare("bg&") == 0){
     return new BackgroundCommand(cmd_line,jobs);
   }
+  else if (firstWord.compare("kill")==0 || firstWord.compare("kill&")==0){
+    return new KillCommand(cmd_line,jobs);
+  }
  // .....
   else {
     return new ExternalCommand(cmd_line);
@@ -285,6 +288,27 @@ BackgroundCommand::BackgroundCommand(const char* cmd_line,JobsList* jobs): Built
       cmd = job->cmd_line;
       jobs->removeJobFromStoppedJobs(job_id);
       job->isStopped=false;
+  delete args;
+  }
+}
+KillCommand::KillCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(cmd_line){
+  char** args = new char*[COMMAND_MAX_ARGS];
+  int len =_parseCommandLine(cmd_line,args);
+  try{
+    pid = jobs->getJobById(atoi(args[2]))->pid;
+  }
+  catch (std::exception& e){
+    //job does not exist
+  }
+
+  if(len!=3){
+    throw std::exception();//invalid arguments;
+  }
+  try{
+  signum=atoi(args[1])*(-1);
+  }
+  catch(std::exception&e){
+    //invalid args
   }
 }
 //Destructors
@@ -360,6 +384,19 @@ void BackgroundCommand::execute(){
   std::cout<< cmd<< " : "<< pid<< std::endl;
   kill(pid,SIGCONT);
 }
+void KillCommand::execute(){
+  //Should use macro
+  try{
+  kill(pid,signum);
+  }
+  catch (std::exception& e){
+  }
+  std::cout << "signal number " << signum << "was sent to  pid " << pid << std::endl;
+
+}
+
+
+
 //Jobs class
 JobsList::JobsList(): max_job_id(0) {
 
