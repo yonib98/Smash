@@ -127,6 +127,9 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
   else if(firstWord.compare("fg") == 0 || firstWord.compare("fg&") == 0){
     return new ForegroundCommand(cmd_line,jobs);
   }
+  else if(firstWord.compare("bg") == 0 || firstWord.compare("bg&") == 0){
+    return new BackgroundCommand(cmd_line,jobs);
+  }
  // .....
   else {
     return new ExternalCommand(cmd_line);
@@ -263,7 +266,8 @@ BackgroundCommand::BackgroundCommand(const char* cmd_line,JobsList* jobs): Built
       }   
       pid= job->pid;
       cmd = job->cmd_line;
-      jobs->removeJobFromStoppedJobs(job->job_id);   
+      jobs->removeJobFromStoppedJobs(job->job_id);
+      job->isStopped=false;   
     }
     else{
       job_id = atoi(args[1]);
@@ -280,6 +284,7 @@ BackgroundCommand::BackgroundCommand(const char* cmd_line,JobsList* jobs): Built
       pid = job->pid;
       cmd = job->cmd_line;
       jobs->removeJobFromStoppedJobs(job_id);
+      job->isStopped=false;
   }
 }
 //Destructors
