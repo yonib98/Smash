@@ -6,7 +6,8 @@
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
 class Command {
-std::string cmd_line;
+  protected:
+ std::string cmd_line;
 friend class JobsList;
  public:
   Command(const char* cmd_line);
@@ -25,6 +26,7 @@ class BuiltInCommand : public Command {
 
 class ExternalCommand : public Command {
   char** argv;
+  bool background;
  public:
   ExternalCommand(const char* cmd_line);
   virtual ~ExternalCommand();
@@ -93,31 +95,34 @@ class QuitCommand : public BuiltInCommand {
 class JobsList {
   public:
   class JobEntry {
-    Command* cmd;
+    std::string cmd_line;
     int job_id;
     int pid;
     bool isStopped;
     bool isFinished;
     time_t start_time;
     public:
-    JobEntry(Command* cmd, time_t start_time, int job_id,int pid, bool isStopped=false): cmd(cmd), job_id(job_id),pid(pid), isStopped(isStopped), isFinished(false), start_time(start_time) {};
+    JobEntry(std::string cmd_line, time_t start_time, int job_id,int pid, bool isStopped=false): cmd_line(cmd_line), job_id(job_id),pid(pid), isStopped(isStopped), isFinished(false), start_time(start_time) {};
     friend class JobsList;
+    friend class ForegroundCommand;
+    friend class BackgroundCommand;
    // TODO: Add your data members
   };
   private:
-  std::list<JobEntry> allJobs;
-  std::list<JobEntry> stoppedJobs;
+  std::list<JobEntry*> allJobs;
+  std::list<JobEntry*> stoppedJobs;
   int max_job_id;
  // TODO: Add your data members
  public:
   JobsList();
   ~JobsList();
-  void addJob(Command* cmd, int pid, bool isStopped = false);
+  void addJob(std::string cmd_line, int pid, bool isStopped = false);
   void printJobsList();
   void killAllJobs();
   void removeFinishedJobs();
   JobEntry * getJobById(int jobId);
   void removeJobById(int jobId);
+  void removeJobFromStoppedJobs(int jobId);
   JobEntry * getLastJob(int* lastJobId);
   JobEntry *getLastStoppedJob(int *jobId);
   // TODO: Add extra methods or modify exisitng ones as needed
@@ -125,6 +130,7 @@ class JobsList {
 
 class JobsCommand : public BuiltInCommand {
  // TODO: Add your data members
+ JobsList* jobs;
  public:
   JobsCommand(const char* cmd_line, JobsList* jobs);
   virtual ~JobsCommand() {}
@@ -140,7 +146,9 @@ class KillCommand : public BuiltInCommand {
 };
 
 class ForegroundCommand : public BuiltInCommand {
- // TODO: Add your data members
+  std::string cmd;
+  int pid;
+  int job_id;
  public:
   ForegroundCommand(const char* cmd_line, JobsList* jobs);
   virtual ~ForegroundCommand() {}
@@ -148,7 +156,9 @@ class ForegroundCommand : public BuiltInCommand {
 };
 
 class BackgroundCommand : public BuiltInCommand {
- // TODO: Add your data members
+ std::string cmd;
+ int pid; 
+ int job_id;
  public:
   BackgroundCommand(const char* cmd_line, JobsList* jobs);
   virtual ~BackgroundCommand() {}
@@ -174,6 +184,9 @@ class SmallShell {
  private:
   std::string prompt; 
   char* plastpwd;
+  JobsList* jobs;
+  int running_pid;
+  std::string running_process;
   SmallShell();
  public:
   Command *CreateCommand(const char* cmd_line);
@@ -189,6 +202,11 @@ class SmallShell {
   void executeCommand(const char* cmd_line);
   void setPrompt(std::string prompt);
   std::string getPrompt();
+  void addJob(std::string cmd_line, int pid, bool is_stopped=false);
+  int getRunningPid();
+  void setRunningPid(int pid);
+  void setRunningProcess(std::string cmd);
+  std::string getRunningProcess();
 };
 
 #endif //SMASH_COMMAND_H_

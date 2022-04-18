@@ -82,12 +82,13 @@ void _removeBackgroundSign(char* cmd_line) {
 
 // TODO: Add your implementation for classes in Commands.h 
 
-SmallShell::SmallShell(): prompt("smash"), plastpwd(nullptr){
-// TODO: add your implementation
+SmallShell::SmallShell(): prompt("smash"), plastpwd(nullptr), running_pid(-1){
+  jobs= new JobsList();
 }
 
 SmallShell::~SmallShell() {
   delete [] plastpwd;
+  delete jobs;
 }
 void SmallShell::setPrompt(string prompt){
   this->prompt=prompt;
@@ -95,6 +96,10 @@ void SmallShell::setPrompt(string prompt){
 string SmallShell::getPrompt(){
   return this->prompt;
 }
+  void SmallShell::addJob(std::string cmd_line, int pid, bool is_stopped){
+    jobs->addJob(cmd_line,pid,is_stopped);
+  }
+
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
@@ -116,6 +121,12 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
     return new ChangeDirCommand(cmd_line, &this->plastpwd);
     
   } 
+  else if (firstWord.compare("jobs")==0 || firstWord.compare("jobs&")==0){
+    return new JobsCommand(cmd_line,jobs);
+  }
+  else if(firstWord.compare("fg") == 0 || firstWord.compare("fg&") == 0){
+    return new ForegroundCommand(cmd_line,jobs);
+  }
  // .....
   else {
     return new ExternalCommand(cmd_line);
@@ -133,7 +144,20 @@ void SmallShell::executeCommand(const char *cmd_line) {
   // Please note that you must fork smash process for some commands (e.g., external commands....)
 }
 
+void SmallShell::setRunningPid(int pid){
+  running_pid=pid;
+}
 
+int SmallShell::getRunningPid(){
+  return running_pid;
+}
+void SmallShell::setRunningProcess(std::string cmd){
+  this->running_process=cmd;
+}
+
+std::string SmallShell::getRunningProcess(){
+  return this->running_process;
+}
 //Constructors
 Command::Command(const char* cmd_line): cmd_line(cmd_line){
 };
@@ -145,7 +169,14 @@ ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {
   argv[2] = new char[strlen(cmd_line)+1];
   strcpy(argv[0],"/bin/bash");
   strcpy(argv[1],"-c");
-  strcpy(argv[2],cmd_line);
+  strcpy(argv[2], cmd_line);
+  if(_isBackgroundComamnd(cmd_line)){
+    _removeBackgroundSign(argv[2]);
+    background=true;
+  }
+  else {
+    background=false;
+  }
   argv[3]=nullptr;
 };
 
@@ -197,7 +228,61 @@ ChangePromptCommand::ChangePromptCommand(const char* cmd_line): BuiltInCommand(c
     }
     delete [] args;
 };
+JobsCommand::JobsCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(cmd_line), jobs(jobs){};
+ForegroundCommand::ForegroundCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(cmd_line){
+    char** args = new char*[COMMAND_MAX_ARGS];
+    int len =_parseCommandLine(cmd_line,args);
+    if(len==1){
+     typename JobsList::JobEntry* job = jobs->getLastJob(&job_id);
+      pid = job->pid;
+      cmd = job->cmd_line;
+      jobs->removeJobById(job_id);
+      
+    }else{
+      job_id = atoi(args[1]);
+     typename JobsList::JobEntry* job =  jobs->getJobById(job_id);
+      pid = job->pid;
+      cmd = job->cmd_line;
+      jobs->removeJobById(job_id);
 
+    }
+    delete [] args;
+}
+BackgroundCommand::BackgroundCommand(const char* cmd_line,JobsList* jobs): BuiltInCommand(cmd_line){
+    char** args = new char*[COMMAND_MAX_ARGS];
+    int len =_parseCommandLine(cmd_line,args);
+    if(len==1){
+      typename JobsList::JobEntry* job;
+      try{
+        int jobID;
+         job = jobs->getLastStoppedJob(&jobID);
+      }
+      catch(std::exception& e){
+        //catch (does not exist)
+        //catch (empty)
+      }   
+      pid= job->pid;
+      cmd = job->cmd_line;
+      jobs(->jobFromStoppedJobs(job->job_id);   
+    }
+    else{
+      job_id = atoi(args[1]);
+      typename JobsList::JobEntry* job;
+     try{
+        job=jobs->getJobById(job_id);
+     }
+     catch{
+ (std::exception& e)       //job id does not exist;
+     }
+      if(!job->isStopped){
+        throw std::exception();//job is already in the background
+
+      }   
+      pid = job->pid;
+      cmd = job->cmd_line;
+      jobs->removeJobFromStoppedJobs(job_id);
+  }
+}
 //Destructors
 Command::~Command(){
 }
@@ -228,17 +313,49 @@ void ChangePromptCommand::execute(){
     smash.setPrompt(prompt);
 
 }
-
+void JobsCommand::execute(){
+  jobs->printJobsList();
+}
 //External Executes
 void ExternalCommand::execute(){
   
   int pid = fork();
   if(pid==0){
+    setpgrp();
     execv("/bin/bash",argv);
   }else{
+    if(!background){
+    //foregound
+    SmallShell& smash= SmallShell::getInstance();
+    smash.setRunningPid(pid);
+    smash.setRunningProcess(this->cmd_line);
     int status;
     waitpid(pid,&status,WUNTRACED);
+    smash.setRunningPid(-1);
+    smash.setRunningProcess("");
+    }
+    else{
+      SmallShell& smash= SmallShell::getInstance();
+      smash.addJob(this->cmd_line,pid);
+    }
   }
+}
+
+void ForegroundCommand::execute(){
+  std::cout << cmd<<" : "<< pid<<std::endl;
+  SmallShell& smash= SmallShell::getInstance();
+  smash.setRunningPid(pid);
+  smash.setRunningProcess(cmd);
+  int status;
+  waitpid(pid,&status,WUNTRACED);
+  smash.setRunningPid(-1);
+  smash.setRunningProcess("");
+  waitpid(pid, &status, WUNTRACED);
+}
+
+void BackgroundCommand::execute(){
+  std::cout<< cmd<< " : "<< pid<< std::endl;
+  kill(pid,SIGCONT);
 }
 //Jobs class
 JobsList::JobsList(): max_job_id(0) {
@@ -246,9 +363,9 @@ JobsList::JobsList(): max_job_id(0) {
 }
 
 JobsList::~JobsList(){}
-void JobsList::addJob(Command* cmd, int pid,bool isStopped){
+void JobsList::addJob(std::string cmd, int pid,bool isStopped){
   time_t start_time = time(nullptr);
-  JobEntry new_job = JobEntry(cmd,start_time,max_job_id+1,pid,isStopped);
+  JobEntry* new_job = new JobEntry(cmd,start_time,max_job_id+1,pid,isStopped);
   allJobs.push_back(new_job);
   if(isStopped){
     stoppedJobs.push_back(new_job);
@@ -257,9 +374,9 @@ void JobsList::addJob(Command* cmd, int pid,bool isStopped){
 }
 void JobsList::printJobsList(){
   time_t curr_time= time(nullptr);
-  for(JobEntry a : allJobs){
-    std::cout<<"["<<a.job_id<<"]"<< a.cmd<<" :"<<a.pid<<" "<< difftime(a.start_time,curr_time)<< " ";
-    if(a.isStopped==true){
+  for(JobEntry* tmp : allJobs){
+    std::cout<<"["<<tmp->job_id<<"]"<< tmp->cmd_line<<" :"<<tmp->pid<<" "<< difftime(curr_time,tmp->start_time)<< " ";
+    if(tmp->isStopped==true){
       std::cout<<"(stopped)"<<std::endl;
     }
     else
@@ -273,25 +390,35 @@ void JobsList:: removeFinishedJobs(){
   
 }
 typename JobsList::JobEntry* JobsList::getJobById(int jobId){
-  for(JobEntry tmp : allJobs){
-    if(tmp.job_id==jobId){
-      return &tmp;
+  for(JobEntry* tmp : allJobs){
+    if(tmp->job_id==jobId){
+      return tmp;
     }
   }
-  throw exception() //Doesnt exist
+  throw exception(); //Doesnt exist
 }
 void JobsList::removeJobById(int jobId){
-  allJobs.remove(*getJobById(jobId));
-  for(JobEntry a: allJobs){
-    if(a.job_id=jobId){
-      
-    }
+  JobEntry* to_remove = getJobById(jobId);
+  if(to_remove->isStopped){
+    stoppedJobs.remove(getJobById(jobId));
   }
-
+  allJobs.remove(getJobById(jobId));
 }
+
+void JobsList::removeJobFromStoppedJobs(int jobId){
+  JobEntry* to_remove = getJobById(jobId);
+  stoppedJobs.remove(getJobById(jobId));
+}
+
 typename JobsList::JobEntry* JobsList::getLastJob(int* lastJobId){
+  JobEntry* lastjob= allJobs.back();
+  *lastJobId=lastjob->job_id;
+  return lastjob;
 
 }
 typename JobsList::JobEntry* JobsList::getLastStoppedJob(int *jobId){
+  JobEntry* lastStoppedJob= stoppedJobs.back();
+  *jobId= lastStoppedJob->job_id;
+  return lastStoppedJob;
   
 }
