@@ -8,6 +8,8 @@
 #include "Commands.h"
 #include <time.h>
 #include <utime.h>
+#include <fcntl.h>
+#include <stdio.h>
 
 
 using namespace std;
@@ -24,11 +26,14 @@ using namespace std;
 #endif
 
 
-#define DO_SYS( syscall) \
-  if((syscall) == -1){ \
-    perror( #syscall); \
-  }
-  
+#define DO_SYS( syscall ) do { \
+  if( (syscall) == -1 ){ \
+    perror( #syscall ); \
+    exit(1); \
+     } \
+ } while ( 0 ) \
+ 
+ 
 const std::string WHITESPACE = " \n\r\t\f\v";
 
 string _ltrim(const std::string& s)
@@ -88,6 +93,9 @@ void _removeBackgroundSign(char* cmd_line) {
 
 // TODO: Add your implementation for classes in Commands.h 
 
+
+
+//SmallShell
 SmallShell::SmallShell(): prompt("smash"), plastpwd(nullptr), running_pid(-1){
   jobs= new JobsList();
 }
@@ -96,15 +104,34 @@ SmallShell::~SmallShell() {
   delete [] plastpwd;
   delete jobs;
 }
+
 void SmallShell::setPrompt(string prompt){
   this->prompt=prompt;
 }
+
 string SmallShell::getPrompt(){
   return this->prompt;
 }
-  void SmallShell::addJob(std::string cmd_line, int pid, bool is_stopped){
-    jobs->addJob(cmd_line,pid,is_stopped);
-  }
+
+void SmallShell::addJob(std::string cmd_line, int pid, bool is_stopped){
+  jobs->addJob(cmd_line,pid,is_stopped);
+}
+
+
+void SmallShell::setRunningPid(int pid){
+  running_pid=pid;
+}
+
+int SmallShell::getRunningPid(){
+  return running_pid;
+}
+void SmallShell::setRunningProcess(std::string cmd){
+  this->running_process=cmd;
+}
+
+std::string SmallShell::getRunningProcess(){
+  return this->running_process;
+}
 
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
@@ -114,7 +141,13 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
 
   string cmd_s = _trim(string(cmd_line));
   string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
-  if (firstWord.compare("pwd") == 0 || firstWord.compare("pwd&") == 0) {
+  if (cmd_s.find(">>",0)!= string::npos){
+    return new RedirectionCommand(cmd_line, true);
+  }
+  else if (cmd_s.find(">",0)!=string::npos){
+    return new RedirectionCommand(cmd_line,false);
+  }
+ else if (firstWord.compare("pwd") == 0 || firstWord.compare("pwd&") == 0) {
     return new GetCurrDirCommand(cmd_line);
   }
   else if (firstWord.compare("showpid") == 0 || firstWord.compare("showpid&")==0) {
@@ -139,6 +172,12 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
   else if (firstWord.compare("kill")==0 || firstWord.compare("kill&")==0){
     return new KillCommand(cmd_line,jobs);
   }
+  else if (firstWord.compare("quit")==0 || firstWord.compare("quit&")==0){
+   return new QuitCommand(cmd_line,jobs);
+  }
+  else if (firstWord.compare("touch")==0 || firstWord.compare("touch&")==0){
+    return new TouchCommand(cmd_line);
+  }
  // .....
   else {
     return new ExternalCommand(cmd_line);
@@ -151,29 +190,24 @@ void SmallShell::executeCommand(const char *cmd_line) {
   // TODO: Add your implementation here
   // for example:
   Command* cmd = CreateCommand(cmd_line);
+  jobs->removeFinishedJobs();
+  //External
+  //External bg
+  //builtin
   cmd->execute();
   delete cmd;
   // Please note that you must fork smash process for some commands (e.g., external commands....)
 }
 
-void SmallShell::setRunningPid(int pid){
-  running_pid=pid;
-}
+//FINISHED SMASH
 
-int SmallShell::getRunningPid(){
-  return running_pid;
-}
-void SmallShell::setRunningProcess(std::string cmd){
-  this->running_process=cmd;
-}
 
-std::string SmallShell::getRunningProcess(){
-  return this->running_process;
-}
-//Constructors
-Command::Command(const char* cmd_line): cmd_line(cmd_line){
-};
+//------Commands----------
+//BASIC COMMANDS Constructors
+Command::Command(const char* cmd_line): cmd_line(cmd_line){}
+
 BuiltInCommand::BuiltInCommand(const char* cmd_line): Command(cmd_line) {};
+
 ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {
   argv = new char*[4];
   argv[0] = new char[20];
@@ -191,13 +225,6 @@ ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {
   }
   argv[3]=nullptr;
 };
-
-ExternalCommand::~ExternalCommand(){
-  for(int i=0;i<3;i++){
-    delete argv[i];
-  }
-  delete [] argv;
-}
 
 //BuiltIns C'tor
 ChangeDirCommand::ChangeDirCommand (const char* cmd_line, char** plastPwd): BuiltInCommand(cmd_line){
@@ -228,8 +255,11 @@ ChangeDirCommand::ChangeDirCommand (const char* cmd_line, char** plastPwd): Buil
   
   delete [] args;
 }
+
 GetCurrDirCommand::GetCurrDirCommand(const char* cmd_line): BuiltInCommand(cmd_line) {};
+
 ShowPidCommand::ShowPidCommand(const char* cmd_line): BuiltInCommand(cmd_line){};
+
 ChangePromptCommand::ChangePromptCommand(const char* cmd_line): BuiltInCommand(cmd_line) {
     char** args = new char*[COMMAND_MAX_ARGS];
     int len =_parseCommandLine(cmd_line,args);
@@ -240,7 +270,9 @@ ChangePromptCommand::ChangePromptCommand(const char* cmd_line): BuiltInCommand(c
     }
     delete [] args;
 };
+
 JobsCommand::JobsCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(cmd_line), jobs(jobs){};
+
 ForegroundCommand::ForegroundCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(cmd_line){
     char** args = new char*[COMMAND_MAX_ARGS];
     int len =_parseCommandLine(cmd_line,args);
@@ -260,6 +292,7 @@ ForegroundCommand::ForegroundCommand(const char* cmd_line, JobsList* jobs): Buil
     }
     delete [] args;
 }
+
 BackgroundCommand::BackgroundCommand(const char* cmd_line,JobsList* jobs): BuiltInCommand(cmd_line){
     char** args = new char*[COMMAND_MAX_ARGS];
     int len =_parseCommandLine(cmd_line,args);
@@ -297,6 +330,7 @@ BackgroundCommand::BackgroundCommand(const char* cmd_line,JobsList* jobs): Built
   delete args;
   }
 }
+
 KillCommand::KillCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(cmd_line){
   char** args = new char*[COMMAND_MAX_ARGS];
   int len =_parseCommandLine(cmd_line,args);
@@ -316,11 +350,79 @@ KillCommand::KillCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(c
   catch(std::exception&e){
     //invalid args
   }
+  delete [] args;
 }
-//Destructors
+
+QuitCommand::QuitCommand(const char* cmd_line,JobsList* jobs): BuiltInCommand(cmd_line), jobs(jobs){
+  char** args = new char*[COMMAND_MAX_ARGS];
+  int len =_parseCommandLine(cmd_line,args);
+  if(len==1 || strcmp(args[1],"kill")!=0){
+    killAll=false;
+  }else{
+    killAll=true;
+  }
+  delete [] args;
+}
+
+//----Special I/O Commands----
+
+RedirectionCommand::RedirectionCommand(const char* cmd_line, bool append): Command(cmd_line),append(append){
+  std::string command_n;
+  if(!append){
+  std::string command_f = _trim(string(cmd_line));
+  command_n =_trim(command_f.substr(0,command_f.find_first_of(">")));
+  filename =_trim(command_f.substr(command_f.find_first_of(">")+1,command_f.length()-1));
+  }
+  else{
+  std::string command_f = _trim(string(cmd_line));
+  command_n = _trim(command_f.substr(0,command_f.find_first_of(">>")));
+  filename =_trim(command_f.substr(command_f.find_first_of(">>")+2,command_f.length()-1));
+  }
+  SmallShell& shell= SmallShell::getInstance();
+  command= shell.CreateCommand(command_n.c_str());
+  if(append){
+    flags= O_WRONLY | O_APPEND;
+  }
+  else{
+    flags= O_WRONLY | O_CREAT;
+  }
+  mode= S_IRUSR | S_IWUSR;
+      
+}
+
+//--------Specail Commands C'tor---------
+TouchCommand::TouchCommand(const char* cmd_line): BuiltInCommand(cmd_line){
+  char** args = new char*[COMMAND_MAX_ARGS];
+  int len =_parseCommandLine(cmd_line,args);
+  if(len!=3){
+    throw std::exception(); //Invalid args
+  }
+  filename = args[1];
+  std::string given_time = args[2];
+  int seconds= atoi(given_time.substr(0,2).c_str());
+  int minutes= atoi(given_time.substr(3,2).c_str());
+  int hours= atoi(given_time.substr(6,2).c_str());
+  int day= atoi(given_time.substr(9,2).c_str());
+  int month= atoi(given_time.substr(12,2).c_str());
+  int year= atoi(given_time.substr(15,4).c_str());
+
+  tm temp= {seconds, minutes,hours, day, month, year};
+  timestamp = mktime(&temp);
+}
+//FINISHED BUILT IN CONSTRUCTORES
+
+//-------Destructors--------
 Command::~Command(){
 }
-//Executes:
+
+ExternalCommand::~ExternalCommand(){
+  for(int i=0;i<3;i++){
+    delete argv[i];
+  }
+  delete [] argv;
+}
+
+//-------Executes-------
 
 //BuiltIns Executes
 void GetCurrDirCommand::execute(){
@@ -348,8 +450,39 @@ void ChangePromptCommand::execute(){
 
 }
 void JobsCommand::execute(){
+  jobs->removeFinishedJobs();
   jobs->printJobsList();
 }
+
+void ForegroundCommand::execute(){
+  std::cout << cmd<<" : "<< pid<<std::endl;
+  SmallShell& smash= SmallShell::getInstance();
+  smash.setRunningPid(pid);
+  smash.setRunningProcess(cmd);
+  int status;
+  waitpid(pid,&status,WUNTRACED);
+  smash.setRunningPid(-1);
+  smash.setRunningProcess("");
+}
+
+void BackgroundCommand::execute(){
+  std::cout<< cmd<< " : "<< pid<< std::endl;
+  kill(pid,SIGCONT);
+}
+void KillCommand::execute(){
+  //Should use macro
+  kill(pid,signum);
+  std::cout << "signal number " << signum << "was sent to  pid " << pid << std::endl;
+
+}
+
+void QuitCommand::execute(){
+  if(killAll){
+    jobs->killAllJobs();
+  }
+  exit(0);
+}
+
 //External Executes
 void ExternalCommand::execute(){
   
@@ -375,41 +508,35 @@ void ExternalCommand::execute(){
   }
 }
 
-void ForegroundCommand::execute(){
-  std::cout << cmd<<" : "<< pid<<std::endl;
-  SmallShell& smash= SmallShell::getInstance();
-  smash.setRunningPid(pid);
-  smash.setRunningProcess(cmd);
-  int status;
-  waitpid(pid,&status,WUNTRACED);
-  smash.setRunningPid(-1);
-  smash.setRunningProcess("");
-}
 
-void BackgroundCommand::execute(){
-  std::cout<< cmd<< " : "<< pid<< std::endl;
-  kill(pid,SIGCONT);
-}
-void KillCommand::execute(){
-  //Should use macro
-  try{
-  kill(pid,signum);
+//-----------I/O------------
+void RedirectionCommand::execute(){
+  int tmp_stdout = dup(1);
+  close(1);
+  int fd= open(filename.c_str(),flags,mode); //opens to fd=1;
+  if(fd==-1){
+    perror("open"); //we need to add std::exception
   }
-  catch (std::exception& e){
-  }
-  std::cout << "signal number " << signum << "was sent to  pid " << pid << std::endl;
-
+  command->execute();
+  delete command;
+  close(1);
+  dup(tmp_stdout);
+  close(tmp_stdout);
 }
 
-
-
-//Jobs class
+//---------Special Commands----------
+void TouchCommand::execute(){
+  utimbuf new_time = {timestamp,timestamp};
+  utime(filename.c_str(),&new_time);
+}
+//----Jobs class--------
 JobsList::JobsList(): max_job_id(0) {
 
 }
 
 JobsList::~JobsList(){}
 void JobsList::addJob(std::string cmd, int pid,bool isStopped){
+  this->removeFinishedJobs();
   time_t start_time = time(nullptr);
   JobEntry* new_job = new JobEntry(cmd,start_time,max_job_id+1,pid,isStopped);
   allJobs.push_back(new_job);
@@ -430,11 +557,45 @@ void JobsList::printJobsList(){
   }
 }
 void JobsList::killAllJobs(){
+  std::cout<< "Sending SIGKILL signal to " << allJobs.size() <<" jobs:" << std::endl;
+  for(JobEntry* tmp : allJobs){
+    int pid = tmp->pid;
+    kill(pid,9);
+    std::cout << pid << ": " << tmp->cmd_line <<  std::endl;
+  }
+  removeFinishedJobs();
+}
 
-}
 void JobsList:: removeFinishedJobs(){
-  
+  std::list<JobEntry*>::iterator it= allJobs.begin(); 
+  while(it!=allJobs.end()){
+    int status;
+   int pid = waitpid((*it)->pid,&status,WNOHANG);
+   if(pid!=0){
+    it=allJobs.erase(it);
+   }
+   else{
+   it++;
+   }
+  }
+   it= stoppedJobs.begin(); 
+   while(it!=stoppedJobs.end()){
+    int status;
+   int pid = waitpid((*it)->pid,&status,WNOHANG);
+   if(pid!=0){
+    it=stoppedJobs.erase(it);
+   }
+   else{
+   it++;
+   }
+  }
+  if(allJobs.empty()){
+    max_job_id=0;
+  }else{
+    max_job_id = allJobs.back()->job_id;
+  }
 }
+
 typename JobsList::JobEntry* JobsList::getJobById(int jobId){
   for(JobEntry* tmp : allJobs){
     if(tmp->job_id==jobId){
@@ -443,6 +604,7 @@ typename JobsList::JobEntry* JobsList::getJobById(int jobId){
   }
   throw exception(); //Doesnt exist
 }
+
 void JobsList::removeJobById(int jobId){
   JobEntry* to_remove = getJobById(jobId);
   if(to_remove->isStopped){

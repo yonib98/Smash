@@ -3,9 +3,9 @@
 
 #include <list>
 #include <string>
+#include <stdio.h>
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
-
 class Command {
   protected:
  std::string cmd_line;
@@ -35,7 +35,9 @@ class ExternalCommand : public Command {
 };
 
 class PipeCommand : public Command {
-  // TODO: Add your data members
+  bool redirect_errors;
+  Command* first_command;
+  Command* second_command;
  public:
   PipeCommand(const char* cmd_line);
   virtual ~PipeCommand() {}
@@ -43,9 +45,13 @@ class PipeCommand : public Command {
 };
 
 class RedirectionCommand : public Command {
- // TODO: Add your data members
+ bool append;
+ Command* command;
+ std::string filename;
+ int flags;
+ mode_t mode;
  public:
-  explicit RedirectionCommand(const char* cmd_line);
+  explicit RedirectionCommand(const char* cmd_line, bool append);
   virtual ~RedirectionCommand() {}
   void execute() override;
   //void prepare() override;
@@ -84,7 +90,9 @@ class ShowPidCommand : public BuiltInCommand {
 
 class JobsList;
 class QuitCommand : public BuiltInCommand {
-// TODO: Add your data members public:
+  bool killAll;
+  JobsList* jobs;
+  public:
   QuitCommand(const char* cmd_line, JobsList* jobs);
   virtual ~QuitCommand() {}
   void execute() override;
@@ -100,10 +108,9 @@ class JobsList {
     int job_id;
     int pid;
     bool isStopped;
-    bool isFinished;
     time_t start_time;
     public:
-    JobEntry(std::string cmd_line, time_t start_time, int job_id,int pid, bool isStopped=false): cmd_line(cmd_line), job_id(job_id),pid(pid), isStopped(isStopped), isFinished(false), start_time(start_time) {};
+    JobEntry(std::string cmd_line, time_t start_time, int job_id,int pid, bool isStopped=false): cmd_line(cmd_line), job_id(job_id),pid(pid), isStopped(isStopped), start_time(start_time) {};
     friend class JobsList;
     friend class ForegroundCommand;
     friend class BackgroundCommand;
@@ -177,6 +184,8 @@ class TailCommand : public BuiltInCommand {
 };
 
 class TouchCommand : public BuiltInCommand {
+  std::string filename;
+  time_t timestamp;
  public:
   TouchCommand(const char* cmd_line);
   virtual ~TouchCommand() {}
