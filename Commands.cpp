@@ -29,8 +29,8 @@ using namespace std;
 #define DO_SYS( syscall ) do { \
   if( (syscall) == -1 ){ \
     perror( #syscall ); \
-    exit(1); \
-     } \
+    exit(1);\
+  } \
  } while ( 0 ) \
  
  
@@ -399,14 +399,20 @@ TouchCommand::TouchCommand(const char* cmd_line): BuiltInCommand(cmd_line){
   }
   filename = args[1];
   std::string given_time = args[2];
-  int seconds= atoi(given_time.substr(0,2).c_str());
-  int minutes= atoi(given_time.substr(3,2).c_str());
-  int hours= atoi(given_time.substr(6,2).c_str());
-  int day= atoi(given_time.substr(9,2).c_str());
-  int month= atoi(given_time.substr(12,2).c_str());
-  int year= atoi(given_time.substr(15,4).c_str());
-
-  tm temp= {seconds, minutes,hours, day, month, year};
+  std::istringstream iss = std::istringstream(args[2]);
+  std::string tmp;
+  int times[6];
+  int i=0;
+  while(std::getline(iss,tmp,':')){
+    times[i++]=atoi(tmp.c_str());
+  }
+  tm temp={0};
+  temp.tm_sec=times[0]; 
+  temp.tm_min=times[1];
+  temp.tm_hour=times[2];
+  temp.tm_mday=times[3];
+  temp.tm_mon=times[4]-1;
+  temp.tm_year=times[5]-1900;
   timestamp = mktime(&temp);
 }
 //FINISHED BUILT IN CONSTRUCTORES
@@ -513,9 +519,9 @@ void ExternalCommand::execute(){
 void RedirectionCommand::execute(){
   int tmp_stdout = dup(1);
   close(1);
-  int fd= open(filename.c_str(),flags,mode); //opens to fd=1;
+  int fd= open(filename.c_str(),flags,mode);//opens to
   if(fd==-1){
-    perror("open"); //we need to add std::exception
+    perror("open");
   }
   command->execute();
   delete command;
