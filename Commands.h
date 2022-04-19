@@ -5,6 +5,7 @@
 #include <string>
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
+
 class Command {
   protected:
  std::string cmd_line;

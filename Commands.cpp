@@ -23,6 +23,12 @@ using namespace std;
 #define FUNC_EXIT()
 #endif
 
+
+#define DO_SYS( syscall) \
+  if((syscall) == -1){ \
+    perror( #syscall); \
+  }
+  
 const std::string WHITESPACE = " \n\r\t\f\v";
 
 string _ltrim(const std::string& s)
@@ -452,7 +458,7 @@ void JobsList::removeJobById(int jobId){
 
 void JobsList::removeJobFromStoppedJobs(int jobId){
   JobEntry* to_remove = getJobById(jobId);
-  stoppedJobs.remove(getJobById(jobId));
+  stoppedJobs.remove(to_remove);
 }
 
 typename JobsList::JobEntry* JobsList::getLastJob(int* lastJobId){
