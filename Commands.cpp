@@ -141,7 +141,13 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
 
   string cmd_s = _trim(string(cmd_line));
   string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
-  if (cmd_s.find(">>",0)!= string::npos){
+    if(cmd_s.find("|&",0)!= string::npos){
+    return new PipeCommand(cmd_line, true);
+  }
+  else if(cmd_s.find("|",0)!=string::npos){
+    return new PipeCommand(cmd_line,false);
+  }
+  else if(cmd_s.find(">>",0)!= string::npos){
     return new RedirectionCommand(cmd_line, true);
   }
   else if (cmd_s.find(">",0)!=string::npos){
@@ -177,6 +183,9 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
   }
   else if (firstWord.compare("touch")==0 || firstWord.compare("touch&")==0){
     return new TouchCommand(cmd_line);
+  }
+  else if (firstWord.compare("tail")==0 || firstWord.compare("tail&")==0){
+    return new TailCommand(cmd_line);
   }
  // .....
   else {
@@ -390,7 +399,24 @@ RedirectionCommand::RedirectionCommand(const char* cmd_line, bool append): Comma
     flags= O_WRONLY | O_CREAT;
   }
   mode= S_IRUSR | S_IWUSR;
-      
+}
+
+PipeCommand::PipeCommand(const char* cmd_line, bool redirect_errors): Command(cmd_line), redirect_errors(redirect_errors){
+  std::string command_1;
+  std::string command_2;
+  if(!redirect_errors){
+  std::string command_f = _trim(string(cmd_line));
+  command_1 =_trim(command_f.substr(0,command_f.find_first_of("|")));
+  command_2 =_trim(command_f.substr(command_f.find_first_of("|")+1,command_f.length()-1));
+  }
+  else{
+  std::string command_f = _trim(string(cmd_line));
+  command_1 = _trim(command_f.substr(0,command_f.find_first_of("|&")));
+  command_2 =_trim(command_f.substr(command_f.find_first_of("|&")+2,command_f.length()-1));
+  }
+  SmallShell& shell= SmallShell::getInstance();
+  first_command= shell.CreateCommand(command_1.c_str());
+  second_command=shell.CreateCommand(command_2.c_str());
 }
 
 //--------Specail Commands C'tor---------
@@ -417,6 +443,26 @@ TouchCommand::TouchCommand(const char* cmd_line): BuiltInCommand(cmd_line){
   temp.tm_mon=times[4]-1;
   temp.tm_year=times[5]-1900;
   timestamp = mktime(&temp);
+  delete args;
+}
+TailCommand::TailCommand(const char* cmd_line): BuiltInCommand(cmd_line){
+    char** args = new char*[COMMAND_MAX_ARGS];
+  int len =_parseCommandLine(cmd_line,args);
+  if(len==2){
+    filename = args[1];
+    lines=10;
+  }
+  else if (len==3){
+    try{
+    lines = atoi(args[1]);
+    lines=lines*-1;
+    }
+    catch (std::exception& e){
+      //invalid args
+    }
+    filename = args[2];
+  }
+  delete args;
 }
 //FINISHED BUILT IN CONSTRUCTORES
 
@@ -560,6 +606,11 @@ void RedirectionCommand::execute(){
   close(tmp_stdout);
 }
 
+void PipeCommand::execute(){
+  if(typeid(first_command)==typeid(BuiltInCommand)){
+    std::cout << "BUILT IN"<< std::endl;
+  }
+}
 //---------Special Commands----------
 void TouchCommand::execute(){
   utimbuf new_time = {timestamp,timestamp};
@@ -568,6 +619,43 @@ void TouchCommand::execute(){
     perror("utime");
   }
 }
+
+void TailCommand::execute(){
+  int flags = flags= O_RDONLY;
+  int fd = open(filename.c_str(),flags);
+  if(fd==-1){
+    perror("open");
+  }
+  int offset = 0;
+  int size = lseek(fd,offset,SEEK_END);
+  char byte[1]={'\n'};
+  while(byte[0]=='\n'){
+    lseek(fd,offset,SEEK_END);
+    int result =read(fd,byte,1);
+    if(result==-1){
+      perror("read");
+    }
+    offset--;
+  }
+  while(lines>0 && size+offset>=0){
+    lseek(fd,offset,SEEK_END);
+    int result = read(fd,byte,1);
+    if(result==-1){
+      perror("read");
+      return;
+    }
+    if(byte[0]=='\n'){
+      lines--;
+    }
+    offset--;
+  }
+  char* buff = new char[-offset];
+  read(fd,buff ,-offset);
+  
+  write(1,buff,-offset);
+ 
+}
+
 //----Jobs class--------
 JobsList::JobsList(): max_job_id(0) {
 

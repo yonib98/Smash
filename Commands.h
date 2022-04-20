@@ -42,7 +42,7 @@ class PipeCommand : public Command {
   Command* first_command;
   Command* second_command;
  public:
-  PipeCommand(const char* cmd_line);
+  PipeCommand(const char* cmd_line, bool redirect_errors);
   virtual ~PipeCommand() {}
   void execute() override;
 };
@@ -180,6 +180,8 @@ class BackgroundCommand : public BuiltInCommand {
 };
 
 class TailCommand : public BuiltInCommand {
+  std::string filename;
+  int lines;
  public:
   TailCommand(const char* cmd_line);
   virtual ~TailCommand() {}
