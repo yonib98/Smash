@@ -29,8 +29,8 @@ using namespace std;
 #define DO_SYS( syscall ) do { \
   if( (syscall) == -1 ){ \
     perror( #syscall ); \
-    exit(1); \
-     } \
+    exit(1);\
+  } \
  } while ( 0 ) \
  
  
@@ -147,7 +147,7 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
   else if (cmd_s.find(">",0)!=string::npos){
     return new RedirectionCommand(cmd_line,false);
   }
- else if (firstWord.compare("pwd") == 0 || firstWord.compare("pwd&") == 0) {
+  else if (firstWord.compare("pwd") == 0 || firstWord.compare("pwd&") == 0) {
     return new GetCurrDirCommand(cmd_line);
   }
   else if (firstWord.compare("showpid") == 0 || firstWord.compare("showpid&")==0) {
@@ -250,7 +250,10 @@ ChangeDirCommand::ChangeDirCommand (const char* cmd_line, char** plastPwd): Buil
     if(*plastPwd==nullptr){
       *plastPwd= new char[1024];
     }
-    getcwd(*plastPwd,1024);
+    char* success_sys=getcwd(*plastPwd,1024);
+    if(success_sys==nullptr){
+      perror("getcwd");
+    }
  }
   
   delete [] args;
@@ -399,14 +402,20 @@ TouchCommand::TouchCommand(const char* cmd_line): BuiltInCommand(cmd_line){
   }
   filename = args[1];
   std::string given_time = args[2];
-  int seconds= atoi(given_time.substr(0,2).c_str());
-  int minutes= atoi(given_time.substr(3,2).c_str());
-  int hours= atoi(given_time.substr(6,2).c_str());
-  int day= atoi(given_time.substr(9,2).c_str());
-  int month= atoi(given_time.substr(12,2).c_str());
-  int year= atoi(given_time.substr(15,4).c_str());
-
-  tm temp= {seconds, minutes,hours, day, month, year};
+  std::istringstream iss = std::istringstream(args[2]);
+  std::string tmp;
+  int times[6];
+  int i=0;
+  while(std::getline(iss,tmp,':')){
+    times[i++]=atoi(tmp.c_str());
+  }
+  tm temp={0};
+  temp.tm_sec=times[0]; 
+  temp.tm_min=times[1];
+  temp.tm_hour=times[2];
+  temp.tm_mday=times[3];
+  temp.tm_mon=times[4]-1;
+  temp.tm_year=times[5]-1900;
   timestamp = mktime(&temp);
 }
 //FINISHED BUILT IN CONSTRUCTORES
@@ -427,7 +436,10 @@ ExternalCommand::~ExternalCommand(){
 //BuiltIns Executes
 void GetCurrDirCommand::execute(){
   char buff[1024];
-   getcwd(buff,1024);
+   char* success_sys=getcwd(buff,1024);
+   if(success_sys==nullptr){
+     perror("getcwd");
+   }
    string pwd = string(buff);
   std::cout << pwd << std::endl;
 }
@@ -435,12 +447,15 @@ void GetCurrDirCommand::execute(){
 void ChangeDirCommand::execute(){
   int result = chdir(next_pwd.c_str());
   if(result==-1){
-    throw exception(); //CHDIR failed
+    perror("chdir");
   }
 }
 
 void ShowPidCommand::execute(){
   int pid = getpid();
+  if(pid==-1){
+    perror("getpid");
+  }
   std::cout << "Smash pid is " << pid << std::endl;
 }
 
@@ -460,18 +475,29 @@ void ForegroundCommand::execute(){
   smash.setRunningPid(pid);
   smash.setRunningProcess(cmd);
   int status;
-  waitpid(pid,&status,WUNTRACED);
+  int success_sys=waitpid(pid,&status,WUNTRACED);
+  if(success_sys==-1){
+    perror("waitpid");
+  }
   smash.setRunningPid(-1);
   smash.setRunningProcess("");
 }
 
 void BackgroundCommand::execute(){
   std::cout<< cmd<< " : "<< pid<< std::endl;
-  kill(pid,SIGCONT);
+  int success=kill(pid,SIGCONT);
+  if(success==-1){
+    perror("kill");
+  }
 }
+
 void KillCommand::execute(){
   //Should use macro
-  kill(pid,signum);
+  int success=kill(pid,signum);
+  if(success==-1){
+    perror("kill");
+    return; //hasn't sent a signal...
+  }
   std::cout << "signal number " << signum << "was sent to  pid " << pid << std::endl;
 
 }
@@ -487,9 +513,16 @@ void QuitCommand::execute(){
 void ExternalCommand::execute(){
   
   int pid = fork();
+  if(pid==-1){
+    perror("fork");
+    return;
+  }
   if(pid==0){
     setpgrp();
-    execv("/bin/bash",argv);
+    int sucess_sys=execv("/bin/bash",argv);
+    if(sucess_sys==-1){
+      perror("execv");
+    }
   }else{
     if(!background){
     //foregound
@@ -497,7 +530,10 @@ void ExternalCommand::execute(){
     smash.setRunningPid(pid);
     smash.setRunningProcess(this->cmd_line);
     int status;
-    waitpid(pid,&status,WUNTRACED);
+    int success_sys=waitpid(pid,&status,WUNTRACED);
+    if(success_sys==-1){
+      perror("waitpid");
+    }
     smash.setRunningPid(-1);
     smash.setRunningProcess("");
     }
@@ -513,9 +549,9 @@ void ExternalCommand::execute(){
 void RedirectionCommand::execute(){
   int tmp_stdout = dup(1);
   close(1);
-  int fd= open(filename.c_str(),flags,mode); //opens to fd=1;
+  int fd= open(filename.c_str(),flags,mode);//opens to
   if(fd==-1){
-    perror("open"); //we need to add std::exception
+    perror("open");
   }
   command->execute();
   delete command;
@@ -527,7 +563,10 @@ void RedirectionCommand::execute(){
 //---------Special Commands----------
 void TouchCommand::execute(){
   utimbuf new_time = {timestamp,timestamp};
-  utime(filename.c_str(),&new_time);
+  int success_sys=utime(filename.c_str(),&new_time);
+  if(success_sys==-1){
+    perror("utime");
+  }
 }
 //----Jobs class--------
 JobsList::JobsList(): max_job_id(0) {
@@ -538,6 +577,10 @@ JobsList::~JobsList(){}
 void JobsList::addJob(std::string cmd, int pid,bool isStopped){
   this->removeFinishedJobs();
   time_t start_time = time(nullptr);
+  if(start_time==-1){
+    perror("time");
+    return;
+  }
   JobEntry* new_job = new JobEntry(cmd,start_time,max_job_id+1,pid,isStopped);
   allJobs.push_back(new_job);
   if(isStopped){
@@ -545,8 +588,13 @@ void JobsList::addJob(std::string cmd, int pid,bool isStopped){
   }
   max_job_id++;
 }
+
 void JobsList::printJobsList(){
   time_t curr_time= time(nullptr);
+  if(curr_time==-1){
+    perror("time");
+    return;
+  }
   for(JobEntry* tmp : allJobs){
     std::cout<<"["<<tmp->job_id<<"]"<< tmp->cmd_line<<" :"<<tmp->pid<<" "<< difftime(curr_time,tmp->start_time)<< " ";
     if(tmp->isStopped==true){
@@ -560,7 +608,11 @@ void JobsList::killAllJobs(){
   std::cout<< "Sending SIGKILL signal to " << allJobs.size() <<" jobs:" << std::endl;
   for(JobEntry* tmp : allJobs){
     int pid = tmp->pid;
-    kill(pid,9);
+    int success_sys=kill(pid,9);
+    if(success_sys==-1){
+      perror("kill");
+      return;
+    }
     std::cout << pid << ": " << tmp->cmd_line <<  std::endl;
   }
   removeFinishedJobs();
@@ -571,6 +623,10 @@ void JobsList:: removeFinishedJobs(){
   while(it!=allJobs.end()){
     int status;
    int pid = waitpid((*it)->pid,&status,WNOHANG);
+   if(pid==-1){
+     perror("waitpid");
+     return;
+   }
    if(pid!=0){
     it=allJobs.erase(it);
    }
@@ -582,6 +638,10 @@ void JobsList:: removeFinishedJobs(){
    while(it!=stoppedJobs.end()){
     int status;
    int pid = waitpid((*it)->pid,&status,WNOHANG);
+   if(pid==-1){
+     perror("waitpid");
+     return;
+   }
    if(pid!=0){
     it=stoppedJobs.erase(it);
    }

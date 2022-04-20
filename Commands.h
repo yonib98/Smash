@@ -4,8 +4,11 @@
 #include <list>
 #include <string>
 #include <stdio.h>
+#include <exception>
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
+using std::exception;
+
 class Command {
   protected:
  std::string cmd_line;
@@ -221,5 +224,9 @@ class SmallShell {
   void setRunningProcess(std::string cmd);
   std::string getRunningProcess();
 };
+
+class TooManyArguments: public exception {};
+class OLDPWDNotSet: public exception {};
+
 
 #endif //SMASH_COMMAND_H_
