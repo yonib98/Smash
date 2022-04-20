@@ -607,11 +607,60 @@ void RedirectionCommand::execute(){
 }
 
 void PipeCommand::execute(){
-  if(typeid(first_command)==typeid(BuiltInCommand)){
-    std::cout << "BUILT IN"<< std::endl;
+  int fields[2];
+  int channel=1;
+  if(redirect_errors){
+    channel==2;
+  }
+  if(dynamic_cast<BuiltInCommand*>(first_command)){
+    int temp_channel=dup(channel);
+    if(dynamic_cast<BuiltInCommand*>(second_command)){
+      //first- builtin, second-built in
+      int temp_stdin= dup(0);
+      close(0);
+      close(channel);
+      int success_sys= pipe(fields);
+      if(success_sys==-1){
+      perror("pipe");
+      } //0- read, 1-write;
+      first_command->execute();
+      close(channel);
+      dup(temp_channel);
+      second_command->execute();
+      close(0);
+      dup(temp_stdin);
+    }
+    else{
+      //first-builtIn, second- External
+      pipe(fields);
+      close(channel);
+      dup(fields[1]);
+      first_command->execute();
+      int pid= fork();
+      if(pid==0){ //son
+        close(0);
+        dup(fields[0]);
+        close(fields[1]);
+        second_command->execute(); //need to change to new execute
+        exit(0);
+      }
+      else{
+        close(fields[0]);
+        close(fields[1]);
+        dup(temp_channel);
+      }
+    }
+  }
+  else{
+    if(dynamic_cast<BuiltInCommand*>(second_command)){
+      //first- external, second- built in
+    }
+    else{
+      //first- external, second- external
+    }
   }
 }
-//---------Special Commands----------
+  //---------Special Commands----------
 void TouchCommand::execute(){
   utimbuf new_time = {timestamp,timestamp};
   int success_sys=utime(filename.c_str(),&new_time);
