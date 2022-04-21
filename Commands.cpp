@@ -90,7 +90,7 @@ void _removeBackgroundSign(char* cmd_line) {
 SmallShell::SmallShell(): prompt("smash"), plastpwd(nullptr), running_pid(-1){
   pid = getpid();
   if(pid==-1){
-    perror("pid");
+    perror("smash error: getpid failed");
   }
   jobs= new JobsList();
 }
@@ -273,7 +273,7 @@ ChangeDirCommand::ChangeDirCommand (const char* cmd_line, char** plastPwd): Buil
     }
     char* success_sys=getcwd(*plastPwd,1024);
     if(success_sys==nullptr){
-      perror("getcwd");
+      perror("smash error: getcwd failed");
     }
  }
   
@@ -459,6 +459,9 @@ TouchCommand::TouchCommand(const char* cmd_line): BuiltInCommand(cmd_line){
   int i=0;
   while(std::getline(iss,tmp,':')){
     times[i++]=atoi(tmp.c_str());
+    if(times[i]==0){
+      throw InvalidArgs(args[0]);
+    }
   }
   tm temp={0};
   temp.tm_sec=times[0]; 
@@ -512,7 +515,8 @@ void GetCurrDirCommand::execute(){
   char buff[1024];
    char* success_sys=getcwd(buff,1024);
    if(success_sys==nullptr){
-     perror("getcwd");
+     perror("smash error: getcwd failed");
+     return;
    }
    string pwd = string(buff);
   std::cout << pwd << std::endl;
@@ -521,7 +525,8 @@ void GetCurrDirCommand::execute(){
 void ChangeDirCommand::execute(){
   int result = chdir(next_pwd.c_str());
   if(result==-1){
-    perror("chdir");
+    perror("smash error: chdir failed");
+    return;
   }
 }
 
@@ -529,7 +534,8 @@ void ShowPidCommand::execute(){
   SmallShell& smash= SmallShell::getInstance();
   int pid = smash.getPid();
   if(pid==-1){
-    perror("getpid");
+    perror("smash error: getpid failed");
+    return;
   }
   std::cout << "smash pid is " << pid << std::endl;
 }
@@ -548,14 +554,19 @@ void ForegroundCommand::execute(){
   std::cout << cmd<<" : "<< pid<<std::endl;
   SmallShell& smash= SmallShell::getInstance();
   if(isStopped){
-    kill(pid,SIGCONT);
+    int result_sys =kill(pid,SIGCONT);
+    if(result_sys==-1){
+      perror("smash error: kill failed");
+      return;
+    }
   }
   smash.setRunningPid(pid);
   smash.setRunningProcess(cmd);
   int status;
   int success_sys=waitpid(pid,&status,WUNTRACED);
   if(success_sys==-1){
-    perror("waitpid");
+    perror("smash error: waitpid failed");
+    return;
   }
   smash.setRunningPid(-1);
   smash.setRunningProcess("");
@@ -565,7 +576,8 @@ void BackgroundCommand::execute(){
   std::cout<< cmd<< " : "<< pid<< std::endl;
   int success=kill(pid,SIGCONT);
   if(success==-1){
-    perror("kill");
+    perror("smash error: kill failed");
+    return;
   }
 }
 
@@ -573,7 +585,7 @@ void KillCommand::execute(){
   //Should use macro
   int success=kill(pid,signum);
   if(success==-1){
-    perror("kill");
+    perror("smash error: kill failed");
     return; //hasn't sent a signal...
   }
   std::cout << "signal number " << signum << " was sent to pid " << pid << std::endl;
@@ -592,14 +604,19 @@ void ExternalCommand::execute(){
   
   int pid = fork();
   if(pid==-1){
-    perror("fork");
+    perror("smash error: fork failed");
     return;
   }
   if(pid==0){
-    setpgrp();
+    int sys_result=setpgrp();
+    if(sys_result==-1){
+      perror("smash error: setpgrp failed");
+      return;
+    }
     int sucess_sys=execv("/bin/bash",argv);
     if(sucess_sys==-1){
-      perror("execv");
+      perror("smash error: execv failed");
+      return;
     }
   }else{
     if(!background){
@@ -610,7 +627,8 @@ void ExternalCommand::execute(){
     int status;
     int success_sys=waitpid(pid,&status,WUNTRACED);
     if(success_sys==-1){
-      perror("waitpid");
+      perror("smash error: waitpid failed");
+      return;
     }
     smash.setRunningPid(-1);
     smash.setRunningProcess("");
@@ -626,16 +644,37 @@ void ExternalCommand::execute(){
 //-----------I/O------------
 void RedirectionCommand::execute(){
   int tmp_stdout = dup(1);
-  close(1);
+  if(tmp_stdout==-1){
+    perror("smash error: dup failed");
+    return;
+  }
+  int close_suc=close(1);
+  if(close_suc==-1){
+    perror("smash error: close failed");
+    return;
+  }
   int fd= open(filename.c_str(),flags,mode);//opens to
   if(fd==-1){
-    perror("open");
+    perror("smash error: open failed");
+    return;
   }
   command->execute();
   delete command;
-  close(1);
-  dup(tmp_stdout);
-  close(tmp_stdout);
+  close_suc=close(1);
+  if(close_suc==-1){
+    perror("smash error: close failed");
+    return;
+  }
+  int dup_success= dup(tmp_stdout);
+  if(dup_success==-1){
+    perror("smash error: dup failed");
+    return;
+  }
+  close_suc=close(tmp_stdout);
+  if(close_suc==-1){
+    perror("smash error: close failed");
+    return;
+  }
 }
 
 void PipeCommand::execute(){
@@ -643,38 +682,88 @@ void PipeCommand::execute(){
   int fields[2];
   int result = pipe(fields);
   if(result==-1){
-    perror("pipe");
+    perror("smash error: pipe failed");
+    return;
   }
   int first_pid = fork();
   if(first_pid==-1){
-    perror("fork");
+    perror("smash error: fork failed");
+    return;
   }
+  int sys_res;
   if(first_pid==0){
     //first command
-    close(channel);
-    dup(fields[1]);
-    close(fields[1]);
-    close(fields[0]);
+   sys_res =  close(channel);
+   if(sys_res==-1){
+     perror("smash error: close failed");
+     return;
+   }
+    sys_res=dup(fields[1]);
+     if(sys_res==-1){
+     perror("smash error: dup failed");
+     return;
+   }
+    sys_res=close(fields[1]);
+     if(sys_res==-1){
+     perror("smash error: close failed");
+     return;
+   }
+    sys_res=close(fields[0]);
+     if(sys_res==-1){
+     perror("smash error: close failed");
+     return;
+   }
     first_command->execute();
     exit(0);
   }
   int second_pid=fork();
   if(second_pid==-1){
-    perror("fork");
+    perror("smash error: fork failed");
+    return;
   }
   if(second_pid==0){
-    close(0);
-    dup(fields[0]);
-    close(fields[0]);
-    close(fields[1]);
+    sys_res=close(0);
+     if(sys_res==-1){
+     perror("smash error: close failed");
+     return;
+   }
+    sys_res=dup(fields[0]);
+     if(sys_res==-1){
+     perror("smash error: dup failed");
+     return;
+   }
+    sys_res=close(fields[0]);
+     if(sys_res==-1){
+     perror("smash error: close failed");
+     return;
+   }
+    sys_res=close(fields[1]);
+     if(sys_res==-1){
+     perror("smash error: close failed");
+     return;
+   }
     second_command->execute();
     exit(0);
   }
-  close(fields[0]);
-  close(fields[1]);
+ sys_res= close(fields[0]);
+  if(sys_res==-1){
+     perror("smash error: close failed");
+     return;
+   }
+ sys_res= close(fields[1]);
+  if(sys_res==-1){
+     perror("smash error: close failed");
+     return;
+   }
   int status;
-  waitpid(first_pid,&status,0);
-  waitpid(second_pid, &status,0);
+  sys_res=waitpid(first_pid,&status,0);
+   if(sys_res==-1){
+     perror("smash error: waitpid failed");
+   }
+  sys_res=waitpid(second_pid, &status,0);
+   if(sys_res==-1){
+     perror("smash error: waitpid failed");
+   }
 
 }
   //---------Special Commands----------
@@ -682,7 +771,8 @@ void TouchCommand::execute(){
   utimbuf new_time = {timestamp,timestamp};
   int success_sys=utime(filename.c_str(),&new_time);
   if(success_sys==-1){
-    perror("utime");
+    perror("smash error: utime failed");
+    return;
   }
 }
 
@@ -691,15 +781,25 @@ void TailCommand::execute(){
   int fd = open(filename.c_str(),flags);
   if(fd==-1){
     perror("open");
+    return;
   }
   int offset = 0;
   int size = lseek(fd,offset,SEEK_END);
+  if(size==-1){
+    perror("smash error: lseek failed");
+    return;
+  }
   char byte[1]={'\n'};
   while(byte[0]=='\n'){
-    lseek(fd,offset,SEEK_END);
+    int tmp = lseek(fd,offset,SEEK_END);
+    if(tmp==-1){
+      perror("smash error: lseek failed");
+      return;
+    }
     int result =read(fd,byte,1);
     if(result==-1){
-      perror("read");
+      perror("smash error: read failed");
+      return;
     }
     offset--;
   }
@@ -707,7 +807,7 @@ void TailCommand::execute(){
     lseek(fd,offset,SEEK_END);
     int result = read(fd,byte,1);
     if(result==-1){
-      perror("read");
+      perror("smash error: read failed");
       return;
     }
     if(byte[0]=='\n'){
@@ -716,9 +816,17 @@ void TailCommand::execute(){
     offset--;
   }
   char* buff = new char[-offset];
-  read(fd,buff ,-offset);
+  int result = read(fd,buff ,-offset);
+  if(result==-1){
+    perror("smash error: read failed");
+    return;
+  }
   
-  write(1,buff,-offset);
+  result = write(1,buff,-offset);
+  if(result==-1){
+    perror("smash error: write failed");
+    return;
+  }
  
 }
 
@@ -732,7 +840,7 @@ void JobsList::addJob(std::string cmd, int pid,bool isStopped){
   this->removeFinishedJobs();
   time_t start_time = time(nullptr);
   if(start_time==-1){
-    perror("time");
+    perror("smash error: time failed");
     return;
   }
   JobEntry* new_job = new JobEntry(cmd,start_time,max_job_id+1,pid,isStopped);
@@ -746,7 +854,7 @@ void JobsList::addJob(std::string cmd, int pid,bool isStopped){
 void JobsList::printJobsList(){
   time_t curr_time= time(nullptr);
   if(curr_time==-1){
-    perror("time");
+    perror("smash error: time failed");
     return;
   }
   for(JobEntry* tmp : allJobs){
@@ -764,7 +872,7 @@ void JobsList::killAllJobs(){
     int pid = tmp->pid;
     int success_sys=kill(pid,9);
     if(success_sys==-1){
-      perror("kill");
+      perror("smash error: kill failed");
       return;
     }
     std::cout << pid << ": " << tmp->cmd_line <<  std::endl;
@@ -778,8 +886,8 @@ void JobsList:: removeFinishedJobs(){
     int status;
    int pid = waitpid((*it)->pid,&status,WNOHANG);
    if(pid==-1){
-     perror("waitpid");
-     return;
+     perror("smash error: waitpid failed");
+     continue;
    }
    if(pid!=0){
      (*it)->isFinished=true;

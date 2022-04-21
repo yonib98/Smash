@@ -12,7 +12,11 @@ void ctrlZHandler(int sig_num) {
   if(pid!=-1){
 	  std::cout <<"smash: got ctrl-Z"<<std::endl;
     smash.addJob(running_process,pid,true);
-    kill(pid,SIGSTOP);
+    int success_sys=kill(pid,SIGSTOP);
+    if(success_sys==-1){
+      perror("smash errorkill failed");
+      return;
+    }
     std::cout <<"smash: process "<<pid<<" was stopped"<< std::endl;
   }
 }
@@ -22,7 +26,11 @@ void ctrlCHandler(int sig_num) {
     int pid = smash.getRunningPid();
     if(pid!=-1){
       std::cout <<"smash: got ctrl-C"  << std::endl;
-      kill(pid,SIGKILL);
+      int success_sys = kill(pid,SIGKILL);
+      if(success_sys==-1){
+        perror("smash error: kill failed");
+        return;
+      }
       std::cout << "smash: process "<< pid<< " was killed"<< std::endl;
     }
 }
