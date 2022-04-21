@@ -111,9 +111,10 @@ class JobsList {
     int job_id;
     int pid;
     bool isStopped;
+    bool isFinished;
     time_t start_time;
     public:
-    JobEntry(std::string cmd_line, time_t start_time, int job_id,int pid, bool isStopped=false): cmd_line(cmd_line), job_id(job_id),pid(pid), isStopped(isStopped), start_time(start_time) {};
+    JobEntry(std::string cmd_line, time_t start_time, int job_id,int pid, bool isStopped=false): cmd_line(cmd_line), job_id(job_id),pid(pid), isStopped(isStopped), isFinished(false), start_time(start_time) {};
     friend class JobsList;
     friend class ForegroundCommand;
     friend class BackgroundCommand;
@@ -163,6 +164,7 @@ class ForegroundCommand : public BuiltInCommand {
   std::string cmd;
   int pid;
   int job_id;
+  bool isStopped;
  public:
   ForegroundCommand(const char* cmd_line, JobsList* jobs);
   virtual ~ForegroundCommand() {}
@@ -229,8 +231,36 @@ class SmallShell {
   int getPid();
 };
 
-class TooManyArguments: public exception {};
-class OLDPWDNotSet: public exception {};
+class InvalidArgs: public exception {
+  std::string command_name;
+  public:
+  InvalidArgs(std::string command_name):  command_name(command_name) {};
+  std::string getCommand() {return command_name;}
+};
+
+class JobIdNotExist: public exception {
+  std::string command_name;
+  int job_id;
+  public:
+  JobIdNotExist(std::string command_name, int job_id): command_name(command_name), job_id(job_id){};
+  std::string getCommand() {return command_name;}
+  int getJobid() {return job_id;}
+};
+class FGJobListEmpty: public exception{};
+
+class StoppedJobsEmpty: public exception{
+  public:
+  StoppedJobsEmpty() {};
+};
+
+class AlreadyBackgroundCommand: public exception{
+  int job_id;
+  public:
+  AlreadyBackgroundCommand(int job_id): job_id(job_id){};
+  int getJobid(){return job_id;}
+};
+class CDTooManyArguments: public exception {};
+class CDOLDPWDNotSet: public exception {};
 
 
 #endif //SMASH_COMMAND_H_
