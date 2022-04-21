@@ -97,6 +97,10 @@ void _removeBackgroundSign(char* cmd_line) {
 
 //SmallShell
 SmallShell::SmallShell(): prompt("smash"), plastpwd(nullptr), running_pid(-1){
+  pid = getpid();
+  if(pid==-1){
+    perror("pid");
+  }
   jobs= new JobsList();
 }
 
@@ -132,7 +136,9 @@ void SmallShell::setRunningProcess(std::string cmd){
 std::string SmallShell::getRunningProcess(){
   return this->running_process;
 }
-
+int SmallShell::getPid(){
+  return pid;
+}
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
@@ -498,11 +504,12 @@ void ChangeDirCommand::execute(){
 }
 
 void ShowPidCommand::execute(){
-  int pid = getpid();
+  SmallShell& smash= SmallShell::getInstance();
+  int pid = smash.getPid();
   if(pid==-1){
     perror("getpid");
   }
-  std::cout << "Smash pid is " << pid << std::endl;
+  std::cout << "smash pid is " << pid << std::endl;
 }
 
 void ChangePromptCommand::execute(){
@@ -607,58 +614,43 @@ void RedirectionCommand::execute(){
 }
 
 void PipeCommand::execute(){
+  int channel = redirect_errors? 2:1;
   int fields[2];
-  int channel=1;
-  if(redirect_errors){
-    channel==2;
+  int result = pipe(fields);
+  if(result==-1){
+    perror("pipe");
   }
-  if(dynamic_cast<BuiltInCommand*>(first_command)){
-    int temp_channel=dup(channel);
-    if(dynamic_cast<BuiltInCommand*>(second_command)){
-      //first- builtin, second-built in
-      int temp_stdin= dup(0);
-      close(0);
-      close(channel);
-      int success_sys= pipe(fields);
-      if(success_sys==-1){
-      perror("pipe");
-      } //0- read, 1-write;
-      first_command->execute();
-      close(channel);
-      dup(temp_channel);
-      second_command->execute();
-      close(0);
-      dup(temp_stdin);
-    }
-    else{
-      //first-builtIn, second- External
-      pipe(fields);
-      close(channel);
-      dup(fields[1]);
-      first_command->execute();
-      int pid= fork();
-      if(pid==0){ //son
-        close(0);
-        dup(fields[0]);
-        close(fields[1]);
-        second_command->execute(); //need to change to new execute
-        exit(0);
-      }
-      else{
-        close(fields[0]);
-        close(fields[1]);
-        dup(temp_channel);
-      }
-    }
+  int first_pid = fork();
+  if(first_pid==-1){
+    perror("fork");
   }
-  else{
-    if(dynamic_cast<BuiltInCommand*>(second_command)){
-      //first- external, second- built in
-    }
-    else{
-      //first- external, second- external
-    }
+  if(first_pid==0){
+    //first command
+    close(channel);
+    dup(fields[1]);
+    close(fields[1]);
+    close(fields[0]);
+    first_command->execute();
+    exit(0);
   }
+  int second_pid=fork();
+  if(second_pid==-1){
+    perror("fork");
+  }
+  if(second_pid==0){
+    close(0);
+    dup(fields[0]);
+    close(fields[0]);
+    close(fields[1]);
+    second_command->execute();
+    exit(0);
+  }
+  close(fields[0]);
+  close(fields[1]);
+  int status;
+  waitpid(first_pid,&status,0);
+  waitpid(second_pid, &status,0);
+
 }
   //---------Special Commands----------
 void TouchCommand::execute(){

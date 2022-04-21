@@ -204,6 +204,7 @@ class SmallShell {
   char* plastpwd;
   JobsList* jobs;
   int running_pid;
+  int pid;
   std::string running_process;
   SmallShell();
  public:
@@ -225,6 +226,7 @@ class SmallShell {
   void setRunningPid(int pid);
   void setRunningProcess(std::string cmd);
   std::string getRunningProcess();
+  int getPid();
 };
 
 class TooManyArguments: public exception {};
