@@ -130,6 +130,10 @@ std::string SmallShell::getRunningProcess(){
 int SmallShell::getPid(){
   return pid;
 }
+
+void SmallShell::addAlarmEntry(AlarmEntry* alarm){
+  this->alarms.push(alarm);
+}
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
@@ -184,6 +188,9 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
   else if (firstWord.compare("tail")==0 || firstWord.compare("tail&")==0){
     return new TailCommand(cmd_line);
   }
+  else if (firstWord.compare("timeout")==0 || firstWord.compare("timeout&") == 0){
+    return new TimeoutCommand(cmd_line);
+  }
  // .....
   else {
     return new ExternalCommand(cmd_line);
@@ -232,7 +239,7 @@ Command::Command(const char* cmd_line): cmd_line(cmd_line){}
 
 BuiltInCommand::BuiltInCommand(const char* cmd_line): Command(cmd_line) {};
 
-ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {
+ExternalCommand::ExternalCommand(const char* cmd_line,AlarmEntry* alarm): Command(cmd_line), alarm(alarm) {
   argv = new char*[4];
   argv[0] = new char[20];
   argv[1]= new char[3];
@@ -495,6 +502,18 @@ TailCommand::TailCommand(const char* cmd_line): BuiltInCommand(cmd_line){
   }
   delete args;
 }
+
+//---------------BONUS------------
+TimeoutCommand::TimeoutCommand(const char* cmd_line): BuiltInCommand(cmd_line){
+  char** args = new char*[COMMAND_MAX_ARGS];
+  int len =_parseCommandLine(cmd_line,args);
+//Add exceptions
+  duration = atoi(args[1]);
+  SmallShell& shell = SmallShell::getInstance();
+  command = shell.CreateCommand(cmd_line+strlen(args[0])+strlen(args[1])+2);
+
+  delete [] args;
+}
 //FINISHED BUILT IN CONSTRUCTORES
 
 //-------Destructors--------
@@ -619,9 +638,14 @@ void ExternalCommand::execute(){
       return;
     }
   }else{
+    //father
+    SmallShell& smash= SmallShell::getInstance();
+    if(alarm!=nullptr){
+      alarm->pid = pid;
+      smash.addAlarmEntry(alarm);
+    }
     if(!background){
     //foregound
-    SmallShell& smash= SmallShell::getInstance();
     smash.setRunningPid(pid);
     smash.setRunningProcess(this->cmd_line);
     int status;
@@ -634,7 +658,6 @@ void ExternalCommand::execute(){
     smash.setRunningProcess("");
     }
     else{
-      SmallShell& smash= SmallShell::getInstance();
       smash.addJob(this->cmd_line,pid);
     }
   }
@@ -828,6 +851,11 @@ void TailCommand::execute(){
     return;
   }
  
+}
+
+//-----------BONUS_TIMEOUT--------
+void TimeoutCommand::execute(){
+  std::cout <<  " hey" << std::endl;
 }
 
 //----Jobs class--------

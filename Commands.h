@@ -2,12 +2,36 @@
 #define SMASH_COMMAND_H_
 
 #include <list>
+#include <queue>
 #include <string>
 #include <stdio.h>
 #include <exception>
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
 using std::exception;
+
+class AlarmEntry{
+  time_t timestamp;
+  int duration;
+  int pid;
+  public:
+    AlarmEntry(time_t timestamp, int duration, int pid): timestamp(timestamp),duration(duration), pid(pid) {};
+  friend class ExternalCommand;
+  bool operator< (AlarmEntry& e){
+    if(e.duration > this->duration){
+        return true;
+    }
+    return false;
+  }
+};
+
+class Comparator{
+  public:
+  bool operator() (AlarmEntry* palrm1,AlarmEntry* palrm2){
+    return *palrm1 < *palrm2;
+  }
+};
+
 
 class Command {
   protected:
@@ -31,8 +55,9 @@ class BuiltInCommand : public Command {
 class ExternalCommand : public Command {
   char** argv;
   bool background;
+  AlarmEntry* alarm;
  public:
-  ExternalCommand(const char* cmd_line);
+  ExternalCommand(const char* cmd_line, AlarmEntry* alarm=nullptr);
   virtual ~ExternalCommand();
   void execute() override;
 };
@@ -199,6 +224,15 @@ class TouchCommand : public BuiltInCommand {
   void execute() override;
 };
 
+class TimeoutCommand : public BuiltInCommand{
+  int duration;
+  Command* command;
+  public:
+    TimeoutCommand(const char* cmd_line);
+    virtual ~TimeoutCommand() {}
+    void execute() override;
+};
+
 
 class SmallShell {
  private:
@@ -208,6 +242,7 @@ class SmallShell {
   int running_pid;
   int pid;
   std::string running_process;
+  std::priority_queue<AlarmEntry*,std::vector<AlarmEntry*>,Comparator> alarms;
   SmallShell();
  public:
   Command *CreateCommand(const char* cmd_line);
@@ -229,6 +264,7 @@ class SmallShell {
   void setRunningProcess(std::string cmd);
   std::string getRunningProcess();
   int getPid();
+  void addAlarmEntry(AlarmEntry* alarm);
 };
 
 class InvalidArgs: public exception {
