@@ -132,7 +132,22 @@ int SmallShell::getPid(){
 }
 
 void SmallShell::addAlarmEntry(AlarmEntry* alarm){
+
   this->alarms.push(alarm);
+  int time_left = alarm(alarms.top()->timestamp);
+}
+AlarmEntry* SmallShell::popAlarm(){
+  AlarmEntry* top_alarm = alarms.top();
+  while(!alarms.empty()){
+   alarms.pop(); 
+   AlarmEntry* tmp = alarms.top();
+   tmp->timestamp-=top_alarm->duration;
+   if(tmp->timestamp>0){
+     break;
+   }
+  }
+  
+  return  top_alarm;
 }
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
@@ -855,7 +870,16 @@ void TailCommand::execute(){
 
 //-----------BONUS_TIMEOUT--------
 void TimeoutCommand::execute(){
-  std::cout <<  " hey" << std::endl;
+  AlarmEntry* new_alarm = new AlarmEntry();
+  new_alarm->duration = duration;
+  time_t current_time= time(nullptr);
+  if(current_time==-1){
+    perror("smash error: time failed");
+  }
+  new_alarm->timestamp=current_time;
+  dynamic_cast<ExternalCommand*>(command)->setAlarm(new_alarm);
+  command->execute();
+
 }
 
 //----Jobs class--------

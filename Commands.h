@@ -15,14 +15,16 @@ class AlarmEntry{
   int duration;
   int pid;
   public:
-    AlarmEntry(time_t timestamp, int duration, int pid): timestamp(timestamp),duration(duration), pid(pid) {};
   friend class ExternalCommand;
+  friend class TimeoutCommand;
+  friend class SmallShell;
   bool operator< (AlarmEntry& e){
     if(e.duration > this->duration){
         return true;
     }
     return false;
   }
+  int getPid() {return pid;};
 };
 
 class Comparator{
@@ -60,6 +62,7 @@ class ExternalCommand : public Command {
   ExternalCommand(const char* cmd_line, AlarmEntry* alarm=nullptr);
   virtual ~ExternalCommand();
   void execute() override;
+  void setAlarm(AlarmEntry* alarm) {this->alarm=alarm;};
 };
 
 class PipeCommand : public Command {
@@ -265,6 +268,7 @@ class SmallShell {
   std::string getRunningProcess();
   int getPid();
   void addAlarmEntry(AlarmEntry* alarm);
+  AlarmEntry* popAlarm();
 };
 
 class InvalidArgs: public exception {
