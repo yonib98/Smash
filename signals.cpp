@@ -6,11 +6,11 @@
 using namespace std;
 
 void ctrlZHandler(int sig_num) {
+  std::cout <<"smash: got ctrl-Z"<<std::endl;
   SmallShell& smash = SmallShell::getInstance();
   int pid = smash.getRunningPid();
   std::string running_process= smash.getRunningProcess();
   if(pid!=-1){
-	  std::cout <<"smash: got ctrl-Z"<<std::endl;
     smash.addJob(running_process,pid,true);
     int success_sys=kill(pid,SIGSTOP);
     if(success_sys==-1){
@@ -22,10 +22,10 @@ void ctrlZHandler(int sig_num) {
 }
 
 void ctrlCHandler(int sig_num) {
+    std::cout <<"smash: got ctrl-C"  << std::endl;
     SmallShell& smash = SmallShell::getInstance();
     int pid = smash.getRunningPid();
     if(pid!=-1){
-      std::cout <<"smash: got ctrl-C"  << std::endl;
       int success_sys = kill(pid,SIGKILL);
       if(success_sys==-1){
         perror("smash error: kill failed");
