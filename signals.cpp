@@ -39,12 +39,13 @@ void alarmHandler(int sig_num) {
   std::cout << "smash:" << "got an alarm" << std::endl;
   SmallShell& smash = SmallShell::getInstance();
   AlarmEntry* timeout_alarm = smash.popAlarm();
-  std::cout << "smash timeout: " << timeout_alarm->getPid() << "has timeout, sending kill" << std::endl;
-  delete timeout_alarm;
+  
+  std::cout << "smash timeout: " << timeout_alarm->getPid() << " has timeout, sending kill" << std::endl;
   int success_sys = kill(timeout_alarm->getPid(),SIGKILL);
     if(success_sys==-1){
       perror("smash error: kill failed");
       return;
     }
+      delete timeout_alarm;
 }
 

@@ -10,7 +10,7 @@
 #include <utime.h>
 #include <fcntl.h>
 #include <stdio.h>
-
+#include <algorithm>
 
 using namespace std;
 
@@ -131,23 +131,33 @@ int SmallShell::getPid(){
   return pid;
 }
 
-void SmallShell::addAlarmEntry(AlarmEntry* alarm){
+void SmallShell::addAlarmEntry(AlarmEntry* new_alarm){
 
-  this->alarms.push(alarm);
-  int time_left = alarm(alarms.top()->timestamp);
+  time_t current_time = time(NULL);
+  for(AlarmEntry* tmp : alarms){
+    tmp->duration -= (int)difftime(current_time,tmp->timestamp);
+    tmp->timestamp=current_time;
+  }
+  this->alarms.push_back(new_alarm);
+    AlarmEntry* closest_alarm = *(std::min_element(alarms.begin(),alarms.end(),Comparator()));
+  alarm(closest_alarm->duration);
+  std::cout << "set alarm to" << closest_alarm->duration << "seconds" << std::endl;
+
 }
 AlarmEntry* SmallShell::popAlarm(){
-  AlarmEntry* top_alarm = alarms.top();
-  while(!alarms.empty()){
-   alarms.pop(); 
-   AlarmEntry* tmp = alarms.top();
-   tmp->timestamp-=top_alarm->duration;
-   if(tmp->timestamp>0){
-     break;
-   }
+  std::vector<AlarmEntry*>::iterator closest_alarm = std::min_element(alarms.begin(),alarms.end(),Comparator());
+  AlarmEntry* timedout_alarm = *(closest_alarm);
+  alarms.erase(closest_alarm);
+  if(alarms.empty()){
+    return timedout_alarm;
   }
-  
-  return  top_alarm;
+  time_t current_time = time(NULL);
+  for(AlarmEntry* tmp : alarms){
+    tmp->duration -= (int)difftime(current_time,tmp->timestamp);
+  }
+    AlarmEntry* new_alarm = *(std::min_element(alarms.begin(),alarms.end(),Comparator()));
+  alarm(new_alarm->duration);
+  return  timedout_alarm;
 }
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
@@ -658,6 +668,7 @@ void ExternalCommand::execute(){
     if(alarm!=nullptr){
       alarm->pid = pid;
       smash.addAlarmEntry(alarm);
+      std::cout <<"son pid is: " << pid << std::endl;
     }
     if(!background){
     //foregound

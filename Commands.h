@@ -19,10 +19,7 @@ class AlarmEntry{
   friend class TimeoutCommand;
   friend class SmallShell;
   bool operator< (AlarmEntry& e){
-    if(e.duration > this->duration){
-        return true;
-    }
-    return false;
+    return this->duration < e.duration;
   }
   int getPid() {return pid;};
 };
@@ -30,10 +27,9 @@ class AlarmEntry{
 class Comparator{
   public:
   bool operator() (AlarmEntry* palrm1,AlarmEntry* palrm2){
-    return *palrm1 < *palrm2;
+    return (*palrm1 < *palrm2);
   }
 };
-
 
 class Command {
   protected:
@@ -245,7 +241,7 @@ class SmallShell {
   int running_pid;
   int pid;
   std::string running_process;
-  std::priority_queue<AlarmEntry*,std::vector<AlarmEntry*>,Comparator> alarms;
+  std::vector<AlarmEntry*> alarms;
   SmallShell();
  public:
   Command *CreateCommand(const char* cmd_line);
