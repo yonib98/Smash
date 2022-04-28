@@ -14,6 +14,7 @@ class AlarmEntry{
   time_t timestamp;
   int duration;
   int pid;
+  std::string command_to_execute;
   public:
   friend class ExternalCommand;
   friend class TimeoutCommand;
@@ -22,6 +23,7 @@ class AlarmEntry{
     return this->duration < e.duration;
   }
   int getPid() {return pid;};
+  std::string getCommandToExecute() {return command_to_execute;};
 };
 
 class Comparator{
@@ -226,6 +228,7 @@ class TouchCommand : public BuiltInCommand {
 class TimeoutCommand : public BuiltInCommand{
   int duration;
   Command* command;
+  std::string command_to_execute;
   public:
     TimeoutCommand(const char* cmd_line);
     virtual ~TimeoutCommand() {}

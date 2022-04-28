@@ -141,8 +141,6 @@ void SmallShell::addAlarmEntry(AlarmEntry* new_alarm){
   this->alarms.push_back(new_alarm);
     AlarmEntry* closest_alarm = *(std::min_element(alarms.begin(),alarms.end(),Comparator()));
   alarm(closest_alarm->duration);
-  std::cout << "set alarm to" << closest_alarm->duration << "seconds" << std::endl;
-
 }
 AlarmEntry* SmallShell::popAlarm(){
   std::vector<AlarmEntry*>::iterator closest_alarm = std::min_element(alarms.begin(),alarms.end(),Comparator());
@@ -154,8 +152,9 @@ AlarmEntry* SmallShell::popAlarm(){
   time_t current_time = time(NULL);
   for(AlarmEntry* tmp : alarms){
     tmp->duration -= (int)difftime(current_time,tmp->timestamp);
+    tmp->timestamp=current_time;
   }
-    AlarmEntry* new_alarm = *(std::min_element(alarms.begin(),alarms.end(),Comparator()));
+  AlarmEntry* new_alarm = *(std::min_element(alarms.begin(),alarms.end(),Comparator()));
   alarm(new_alarm->duration);
   return  timedout_alarm;
 }
@@ -453,7 +452,7 @@ RedirectionCommand::RedirectionCommand(const char* cmd_line, bool append): Comma
     flags= O_WRONLY | O_APPEND;
   }
   else{
-    flags= O_WRONLY | O_CREAT;
+    flags= O_WRONLY | O_CREAT | O_TRUNC;
   }
   mode= S_IRUSR | S_IWUSR;
 }
@@ -534,6 +533,7 @@ TimeoutCommand::TimeoutCommand(const char* cmd_line): BuiltInCommand(cmd_line){
   int len =_parseCommandLine(cmd_line,args);
 //Add exceptions
   duration = atoi(args[1]);
+  command_to_execute=cmd_line;
   SmallShell& shell = SmallShell::getInstance();
   command = shell.CreateCommand(cmd_line+strlen(args[0])+strlen(args[1])+2);
 
@@ -664,11 +664,11 @@ void ExternalCommand::execute(){
     }
   }else{
     //father
+
     SmallShell& smash= SmallShell::getInstance();
     if(alarm!=nullptr){
       alarm->pid = pid;
       smash.addAlarmEntry(alarm);
-      std::cout <<"son pid is: " << pid << std::endl;
     }
     if(!background){
     //foregound
@@ -883,6 +883,7 @@ void TailCommand::execute(){
 void TimeoutCommand::execute(){
   AlarmEntry* new_alarm = new AlarmEntry();
   new_alarm->duration = duration;
+  new_alarm->command_to_execute=command_to_execute;
   time_t current_time= time(nullptr);
   if(current_time==-1){
     perror("smash error: time failed");
