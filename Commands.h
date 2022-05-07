@@ -2,12 +2,36 @@
 #define SMASH_COMMAND_H_
 
 #include <list>
+#include <queue>
 #include <string>
 #include <stdio.h>
 #include <exception>
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
 using std::exception;
+
+class AlarmEntry{
+  time_t timestamp;
+  int duration;
+  int pid;
+  std::string command_to_execute;
+  public:
+  friend class ExternalCommand;
+  friend class TimeoutCommand;
+  friend class SmallShell;
+  bool operator< (AlarmEntry& e){
+    return this->duration < e.duration;
+  }
+  int getPid() {return pid;};
+  std::string getCommandToExecute() {return command_to_execute;};
+};
+
+class Comparator{
+  public:
+  bool operator() (AlarmEntry* palrm1,AlarmEntry* palrm2){
+    return (*palrm1 < *palrm2);
+  }
+};
 
 class Command {
   protected:
@@ -31,10 +55,12 @@ class BuiltInCommand : public Command {
 class ExternalCommand : public Command {
   char** argv;
   bool background;
+  AlarmEntry* alarm;
  public:
-  ExternalCommand(const char* cmd_line);
+  ExternalCommand(const char* cmd_line, AlarmEntry* alarm=nullptr);
   virtual ~ExternalCommand();
   void execute() override;
+  void setAlarm(AlarmEntry* alarm) {this->alarm=alarm;};
 };
 
 class PipeCommand : public Command {
@@ -107,14 +133,15 @@ class QuitCommand : public BuiltInCommand {
 class JobsList {
   public:
   class JobEntry {
+    public:
     std::string cmd_line;
     int job_id;
     int pid;
     bool isStopped;
     bool isFinished;
+    bool FG;
     time_t start_time;
-    public:
-    JobEntry(std::string cmd_line, time_t start_time, int job_id,int pid, bool isStopped=false): cmd_line(cmd_line), job_id(job_id),pid(pid), isStopped(isStopped), isFinished(false), start_time(start_time) {};
+    JobEntry(std::string cmd_line, time_t start_time, int job_id,int pid, bool isStopped=false,bool FG=false): cmd_line(cmd_line), job_id(job_id),pid(pid), isStopped(isStopped), isFinished(false), start_time(start_time),FG(FG) {};
     friend class JobsList;
     friend class ForegroundCommand;
     friend class BackgroundCommand;
@@ -130,7 +157,7 @@ class JobsList {
  public:
   JobsList();
   ~JobsList();
-  void addJob(std::string cmd_line, int pid, bool isStopped = false);
+  void addJob(std::string cmd_line, int pid, bool isStopped = false, bool FG=false);
   void printJobsList();
   void killAllJobs();
   void removeFinishedJobs();
@@ -139,6 +166,7 @@ class JobsList {
   void removeJobFromStoppedJobs(int jobId);
   JobEntry * getLastJob(int* lastJobId);
   JobEntry *getLastStoppedJob(int *jobId);
+  friend class SmallShell;
   // TODO: Add extra methods or modify exisitng ones as needed
 };
 
@@ -199,6 +227,16 @@ class TouchCommand : public BuiltInCommand {
   void execute() override;
 };
 
+class TimeoutCommand : public BuiltInCommand{
+  int duration;
+  Command* command;
+  std::string command_to_execute;
+  public:
+    TimeoutCommand(const char* cmd_line);
+    virtual ~TimeoutCommand() {}
+    void execute() override;
+};
+
 
 class SmallShell {
  private:
@@ -208,6 +246,8 @@ class SmallShell {
   int running_pid;
   int pid;
   std::string running_process;
+  int running_job_id;
+  std::vector<AlarmEntry*> alarms;
   SmallShell();
  public:
   Command *CreateCommand(const char* cmd_line);
@@ -223,12 +263,19 @@ class SmallShell {
   void executeCommand(const char* cmd_line);
   void setPrompt(std::string prompt);
   std::string getPrompt();
-  void addJob(std::string cmd_line, int pid, bool is_stopped=false);
+  void addJob(std::string cmd_line, int pid, bool is_stopped=false,bool FG=false);
   int getRunningPid();
   void setRunningPid(int pid);
   void setRunningProcess(std::string cmd);
   std::string getRunningProcess();
   int getPid();
+  void setRunningJobId(int job_id){ this->running_job_id=job_id;}
+  int getRunningJobId(){return running_job_id;}
+  JobsList::JobEntry* getJobById(int job_id) {return jobs->getJobById(job_id);}
+  int getMaxJobId(){return jobs->max_job_id;}
+  void addAlarmEntry(AlarmEntry* alarm);
+  AlarmEntry* popAlarm();
+
 };
 
 class InvalidArgs: public exception {

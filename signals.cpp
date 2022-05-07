@@ -11,12 +11,19 @@ void ctrlZHandler(int sig_num) {
   int pid = smash.getRunningPid();
   std::string running_process= smash.getRunningProcess();
   if(pid!=-1){
-    smash.addJob(running_process,pid,true);
+    int running_job=smash.getRunningJobId();
+    JobsList::JobEntry* job = smash.getJobById(running_job);
+    if(running_job==-1){
+      job->job_id=smash.getMaxJobId()+1;
+    }
     int success_sys=kill(pid,SIGSTOP);
     if(success_sys==-1){
-      perror("smash errorkill failed");
-      return;
-    }
+        perror("smash errorkill failed");
+        return;
+      }
+    job->start_time=time(NULL);
+    job->isStopped=true;
+    job->FG=false;
     std::cout <<"smash: process "<<pid<<" was stopped"<< std::endl;
   }
 }
@@ -36,8 +43,16 @@ void ctrlCHandler(int sig_num) {
 }
 
 void alarmHandler(int sig_num) {
-  std::cout << "smash:" << "got an alarm" << std::endl;
+  std::cout << "smash:" << " got an alarm" << std::endl;
   SmallShell& smash = SmallShell::getInstance();
-  int pid = smash.getRunningPid();
+  AlarmEntry* timeout_alarm = smash.popAlarm();
+  
+  std::cout << "smash: " << timeout_alarm->getCommandToExecute() << " timed out!" << std::endl;
+  int success_sys = kill(timeout_alarm->getPid(),SIGKILL);
+    if(success_sys==-1){
+      perror("smash error: kill failed");
+      return;
+    }
+      delete timeout_alarm;
 }
 
