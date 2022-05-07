@@ -4,4 +4,4 @@ smash> ./print_args_test.exe arg1 arg2
 smash> ./print_args_test.exe arg1 arg2 arg3 
 smash> ./print_args_test.exe arg1 arg2 arg3 arg4 
 smash> ./print_args_test.exe arg1 arg2 arg3 arg4 arg5 
-smash> Sending SIGKILL signal to 0 jobs:
+smash> smash: sending SIGKILL signal to 0 jobs:

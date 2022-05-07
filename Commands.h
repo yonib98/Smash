@@ -159,6 +159,7 @@ class JobsList {
   JobsList();
   ~JobsList();
   void addJob(std::string cmd_line, int pid, bool isStopped = false, bool FG=false);
+  void addToStoppedJobs(JobsList::JobEntry* job);
   void printJobsList();
   void killAllJobs();
   void removeFinishedJobs();
@@ -276,6 +277,7 @@ class SmallShell {
   int getMaxJobId(){return jobs->max_job_id;}
   void addAlarmEntry(AlarmEntry* alarm);
   AlarmEntry* popAlarm();
+  void addJobToStoppedJobs(JobsList::JobEntry* job);
 
 };
 

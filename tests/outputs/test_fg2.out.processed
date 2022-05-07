@@ -13,4 +13,4 @@ smash: process 5 was killed
 smash> sleep 500& : 6
 smash: got ctrl-C
 smash: process 6 was killed
-smash> Sending SIGKILL signal to 5 jobs:
+smash> smash: sending SIGKILL signal to 5 jobs:

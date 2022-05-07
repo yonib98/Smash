@@ -16,12 +16,14 @@ smash> [1] sleep 100 : 2 X secs (stopped)
 smash> sleep 300 : 4
 smash> sleep 400 : 5
 smash> sleep 200 : 3
-smash> smash> smash> [1] sleep 100 : 2 X secs (stopped)
+smash> sleep 500 : 6
+smash> sleep 100 : 2
+smash> [1] sleep 100 : 2 X secs
 [2] sleep 200 : 3 X secs
 [3] sleep 300 : 4 X secs
 [4] sleep 400 : 5 X secs
-[5] sleep 500 : 6 X secs (stopped)
-smash> Sending SIGKILL signal to 5 jobs:
+[5] sleep 500 : 6 X secs
+smash> smash: sending SIGKILL signal to 5 jobs:
 2: sleep 100
 3: sleep 200
 4: sleep 300

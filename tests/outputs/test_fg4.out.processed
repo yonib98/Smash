@@ -14,4 +14,4 @@ smash: got ctrl-Z
 smash: process 5 was stopped
 smash> [2] sleep 200& : 3 X secs (stopped)
 [3] sleep 300& : 5 X secs (stopped)
-smash> Sending SIGKILL signal to 3 jobs:
+smash> smash: sending SIGKILL signal to 3 jobs:

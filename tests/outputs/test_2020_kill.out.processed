@@ -21,4 +21,4 @@ smash> signal number 9 was sent to pid 7
 smash> smash> smash> smash: got ctrl-C
 smash: process 10 was killed
 smash> signal number 9 was sent to pid 11
-smash> Sending SIGKILL signal to 1 jobs:
+smash> smash: sending SIGKILL signal to 1 jobs:

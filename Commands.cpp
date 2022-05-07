@@ -112,6 +112,9 @@ void SmallShell::addJob(std::string cmd_line, int pid, bool is_stopped,bool FG){
   jobs->addJob(cmd_line,pid,is_stopped,FG);
 }
 
+void SmallShell::addJobToStoppedJobs(JobsList::JobEntry* job){
+  jobs->addToStoppedJobs(job);
+}
 
 void SmallShell::setRunningPid(int pid){
   running_pid=pid;
@@ -927,6 +930,9 @@ void JobsList::addJob(std::string cmd, int pid,bool isStopped,bool FG){
     stoppedJobs.push_back(new_job);
   }
 }
+void JobsList::addToStoppedJobs(JobEntry* job){
+  stoppedJobs.push_back(job);
+}
 
 void JobsList::printJobsList(){
   time_t curr_time= time(nullptr);
@@ -947,7 +953,7 @@ void JobsList::printJobsList(){
   }
 }
 void JobsList::killAllJobs(){
-  std::cout<< "Sending SIGKILL signal to " << allJobs.size() <<" jobs:" << std::endl;
+  std::cout<< "smash: sending SIGKILL signal to " << allJobs.size() <<" jobs:" << std::endl;
   for(JobEntry* tmp : allJobs){
     int pid = tmp->pid;
     int success_sys=kill(pid,9);

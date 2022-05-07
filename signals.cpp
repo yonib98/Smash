@@ -24,6 +24,7 @@ void ctrlZHandler(int sig_num) {
     job->start_time=time(NULL);
     job->isStopped=true;
     job->FG=false;
+    smash.addJobToStoppedJobs(job);
     std::cout <<"smash: process "<<pid<<" was stopped"<< std::endl;
   }
 }

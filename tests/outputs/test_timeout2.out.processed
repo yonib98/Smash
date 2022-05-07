@@ -4,4 +4,4 @@ smash> smash: got an alarm
 smash: timeout 2 sleep 5& timed out!
 smash: got an alarm
 smash: timeout 3 sleep 10& timed out!
-smash> Sending SIGKILL signal to 0 jobs:
+smash> smash: sending SIGKILL signal to 0 jobs:
