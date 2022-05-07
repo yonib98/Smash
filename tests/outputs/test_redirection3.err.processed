@@ -1,0 +1,7 @@
+smash error: open failed: No such file or directory
+smash error: dup failed: Bad file descriptor
+smash error: dup failed: Bad file descriptor
+smash error: dup failed: Bad file descriptor
+cat: standard output: Bad file descriptor
+smash error: dup failed: Bad file descriptor
+cat: standard output: Bad file descriptor

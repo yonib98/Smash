@@ -231,25 +231,25 @@ void SmallShell::executeCommand(const char *cmd_line) {
     delete cmd;
   }
   catch(JobIdNotExist& e){
-    std::cout << "smash error: " << e.getCommand() << ": job-id " << e.getJobid() << " does not exist"<< std::endl;
+    std::cerr << "smash error: " << e.getCommand() << ": job-id " << e.getJobid() << " does not exist"<< std::endl;
   }
   catch(FGJobListEmpty& e){
-    std::cout << "smash error: fg: jobs list is empty" << std::endl;
+    std::cerr << "smash error: fg: jobs list is empty" << std::endl;
   }
   catch(AlreadyBackgroundCommand& e){
-    std::cout << "smash error: bg: job-id "<<e.getJobid() << " is already running in the background"<< std::endl; 
+    std::cerr << "smash error: bg: job-id "<<e.getJobid() << " is already running in the background"<< std::endl; 
   }
   catch(StoppedJobsEmpty& e){
-    std::cout << "smash error: bg: there is no stopped jobs to resume"<< std::endl;
+    std::cerr << "smash error: bg: there is no stopped jobs to resume"<< std::endl;
   }
   catch (CDTooManyArguments& e){
-    std::cout << "smash error: cd: too many arguments" << std::endl;
+    std::cerr << "smash error: cd: too many arguments" << std::endl;
   }
   catch (CDOLDPWDNotSet& e){
-    std::cout << "smash error: cd: OLDPWD not set" << std::endl;
+    std::cerr << "smash error: cd: OLDPWD not set" << std::endl;
   }
   catch (InvalidArgs& e){
-    std::cout << "smash error: " << e.getCommand() << ": invalid arguments" << std::endl;
+    std::cerr << "smash error: " << e.getCommand() << ": invalid arguments" << std::endl;
   }
   
 }
@@ -987,6 +987,7 @@ void JobsList:: removeFinishedJobs(){
     it++;
     }
   }
+  }
    it= stoppedJobs.begin(); 
    while(it!=stoppedJobs.end()){
    if((*it)->isFinished){
@@ -1002,7 +1003,7 @@ void JobsList:: removeFinishedJobs(){
     max_job_id = allJobs.back()->job_id;
   }
 }
-}
+
 typename JobsList::JobEntry* JobsList::getJobById(int jobId){
   if(this->allJobs.size()==0){
     throw FGJobListEmpty();

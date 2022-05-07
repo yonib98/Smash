@@ -1,0 +1,8 @@
+smash> smash: got ctrl-Z
+smash: process 2 was stopped
+smash> [1] sleep 10 : 2 X secs (stopped)
+smash> smash> [1] sleep 10 : 2 X secs (stopped)
+smash> sleep 10 : 2
+smash: got ctrl-C
+smash: process 2 was killed
+smash> Sending SIGKILL signal to 1 jobs:

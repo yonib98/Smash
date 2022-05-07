@@ -1,0 +1,17 @@
+smash> submitted by Eran
+smash> echo submitted by Eran : 2
+smash> smash> smash> smash> smash> sleep 200& : 3
+smash: got ctrl-Z
+smash: process 3 was stopped
+smash> [1] sleep 100& : 4 X secs
+[2] sleep 200& : 3 X secs (stopped)
+smash> sleep 100& : 4
+smash: got ctrl-C
+smash: process 4 was killed
+smash> [2] sleep 200& : 3 X secs (stopped)
+smash> smash> sleep 300& : 5
+smash: got ctrl-Z
+smash: process 5 was stopped
+smash> [2] sleep 200& : 3 X secs (stopped)
+[3] sleep 300& : 5 X secs (stopped)
+smash> Sending SIGKILL signal to 3 jobs:

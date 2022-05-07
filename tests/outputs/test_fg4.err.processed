@@ -1,0 +1,4 @@
+smash error: waitpid failed: No child processes
+smash error: fg: jobs list is empty
+smash error: fg: invalid arguments
+smash error: kill failed: No such process
