@@ -282,7 +282,7 @@ ExternalCommand::ExternalCommand(const char* cmd_line,AlarmEntry* alarm): Comman
 };
 
 //BuiltIns C'tor
-ChangeDirCommand::ChangeDirCommand (const char* cmd_line, char** plastPwd): BuiltInCommand(cmd_line){
+ChangeDirCommand::ChangeDirCommand (const char* cmd_line, char** plastPwd): BuiltInCommand(cmd_line), plastPwd(plastPwd){
   char** args = new char*[COMMAND_MAX_ARGS];
   int len =_parseCommandLine(cmd_line,args);
   if(len>2){
@@ -298,13 +298,6 @@ ChangeDirCommand::ChangeDirCommand (const char* cmd_line, char** plastPwd): Buil
     }
     else{
       next_pwd = path;
-    }
-    if(*plastPwd==nullptr){
-      *plastPwd= new char[1024];
-    }
-    char* success_sys=getcwd(*plastPwd,1024);
-    if(success_sys==nullptr){
-      perror("smash error: getcwd failed");
     }
  }
   
@@ -571,11 +564,17 @@ void GetCurrDirCommand::execute(){
 }
 
 void ChangeDirCommand::execute(){
+  char* currdir= new char [1024];
+  getcwd(currdir,1024);
   int result = chdir(next_pwd.c_str());
   if(result==-1){
     perror("smash error: chdir failed");
     return;
   }
+  if(*plastPwd==nullptr){
+      *plastPwd= new char[1024];
+  }
+    strcpy(*plastPwd, currdir);
 }
 
 void ShowPidCommand::execute(){
