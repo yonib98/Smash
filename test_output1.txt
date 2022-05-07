@@ -1,1 +1,4 @@
-smash> smash> hello> hello> hello> hello> smash> smash> smash> smash: sending SIGKILL signal to 0 jobs:
+smash> smash: got ctrl-Z
+smash: process 108087 was stopped
+smash> hello> hello> hello> hello> smash> smash> smash> smash: sending SIGKILL signal to 1 jobs:
+108087: sleep 1

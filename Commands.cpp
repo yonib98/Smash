@@ -372,7 +372,7 @@ BackgroundCommand::BackgroundCommand(const char* cmd_line,JobsList* jobs): Built
     }
     else if (len==2){
       job_id = atoi(args[1]);
-      if(job_id<=0){
+      if(job_id==0){
         throw InvalidArgs(args[0]);
       }
       typename JobsList::JobEntry* job;
@@ -402,22 +402,29 @@ BackgroundCommand::BackgroundCommand(const char* cmd_line,JobsList* jobs): Built
 KillCommand::KillCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(cmd_line){
   char** args = new char*[COMMAND_MAX_ARGS];
   int len =_parseCommandLine(cmd_line,args);
+  if(len!=3){
+    throw InvalidArgs(args[0]);
+  }
   int job_id = atoi(args[2]);
-  if(job_id<=0){
+  if(job_id==0){
         throw InvalidArgs(args[0]);
   }
- typename JobsList::JobEntry* job = jobs->getJobById(job_id);
+  signum=atoi(args[1])*(-1);
+  if(signum<=0 || signum>64){
+    throw InvalidArgs(args[0]);
+  }
+  typename JobsList::JobEntry* job;
+  try{
+    job = jobs->getJobById(job_id);
+  }
+ catch (FGJobListEmpty& e){
+   throw JobIdNotExist(args[0], job_id);
+ }
   if(job==nullptr){
     throw JobIdNotExist(args[0], job_id);
   }
   pid = job->pid;
-  if(len!=3){
-    throw InvalidArgs(args[0]);
-  }
-  signum=atoi(args[1])*(-1);
-  if(signum==0){
-    throw InvalidArgs(args[0]);
-  }
+
   delete [] args;
 }
 
