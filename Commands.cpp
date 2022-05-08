@@ -341,7 +341,13 @@ ForegroundCommand::ForegroundCommand(const char* cmd_line, JobsList* jobs): Buil
       if(job_id==0){
         throw InvalidArgs(args[0]);
       }
-      typename JobsList::JobEntry* job =  jobs->getJobById(job_id);
+      typename JobsList::JobEntry* job;
+      try{
+        job =  jobs->getJobById(job_id);
+      }
+      catch (FGJobListEmpty& e){
+        throw JobIdNotExist(args[0], job_id);
+      }
       if(job==nullptr){
         throw JobIdNotExist(args[0],job_id);
       }
@@ -456,7 +462,7 @@ RedirectionCommand::RedirectionCommand(const char* cmd_line, bool append): Comma
   SmallShell& shell= SmallShell::getInstance();
   command= shell.CreateCommand(command_n.c_str());
   if(append){
-    flags= O_WRONLY | O_APPEND;
+    flags= O_WRONLY | O_APPEND | O_CREAT;
   }
   else{
     flags= O_WRONLY | O_CREAT | O_TRUNC;
@@ -496,10 +502,11 @@ TouchCommand::TouchCommand(const char* cmd_line): BuiltInCommand(cmd_line){
   int times[6];
   int i=0;
   while(std::getline(iss,tmp,':')){
-    times[i++]=atoi(tmp.c_str());
-    if(times[i]==0){
-      throw InvalidArgs(args[0]);
-    }
+    times[i]=atoi(tmp.c_str());
+//    if(times[i]==0){
+//      throw InvalidArgs(args[0]);
+//    }
+    i++;
   }
   tm temp={0};
   temp.tm_sec=times[0]; 
@@ -847,14 +854,17 @@ void TouchCommand::execute(){
 }
 
 void TailCommand::execute(){
-  int flags = flags= O_RDONLY;
+  int flags = O_RDONLY;
   int fd = open(filename.c_str(),flags);
   if(fd==-1){
-    perror("open");
+    perror("smash error: open failed");
     return;
   }
   int offset = 0;
   int size = lseek(fd,offset,SEEK_END);
+  if(size==0){
+    return;
+  }
   if(size==-1){
     perror("smash error: lseek failed");
     return;
