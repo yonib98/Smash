@@ -715,6 +715,9 @@ void ExternalCommand::execute(){
     if(WIFEXITED(status) || WIFSIGNALED(status)){
       smash.getJobById(-1)->isFinished=true;
     }
+    if(alarm!=nullptr){
+      alarm->pid=0;
+    }
     if(success_sys==-1){
       perror("smash error: waitpid failed");
       return;

@@ -2,6 +2,8 @@
 #include <signal.h>
 #include "signals.h"
 #include "Commands.h"
+#include <sys/types.h>
+#include <sys/wait.h>
 
 using namespace std;
 
@@ -49,6 +51,9 @@ void alarmHandler(int sig_num) {
   AlarmEntry* timeout_alarm = smash.popAlarm();
   
   std::cout << "smash: " << timeout_alarm->getCommandToExecute() << " timed out!" << std::endl;
+  if(timeout_alarm->getPid()==0){
+    return;
+  }
   int success_sys = kill(timeout_alarm->getPid(),SIGKILL);
     if(success_sys==-1){
       perror("smash error: kill failed");
