@@ -865,6 +865,9 @@ void TouchCommand::execute(){
 }
 
 void TailCommand::execute(){
+  if(lines==0){
+    return;
+  }
   int flags = O_RDONLY;
   int fd = open(filename.c_str(),flags);
   if(fd==-1){
@@ -880,43 +883,55 @@ void TailCommand::execute(){
     perror("smash error: lseek failed");
     return;
   }
-  char byte[1]={'\n'};
-  while(byte[0]=='\n'){
-    int tmp = lseek(fd,offset,SEEK_END);
-    if(tmp==-1){
-      perror("smash error: lseek failed");
-      return;
-    }
-    int result =read(fd,byte,1);
-    if(result==-1){
-      perror("smash error: read failed");
-      return;
-    }
-    offset--;
-  }
-  while(lines>0 && size+offset>=0){
-    lseek(fd,offset,SEEK_END);
+  char byte[0];
+  offset++;
+  while(lines>0 && size-offset>=0){
+    lseek(fd,-offset,SEEK_END);
     int result = read(fd,byte,1);
     if(result==-1){
       perror("smash error: read failed");
       return;
     }
-    if(byte[0]=='\n'){
+    if(byte[0]=='\n' && offset>1){
       lines--;
     }
-    offset--;
+    offset++;
   }
-  char* buff = new char[-offset];
-  int result = read(fd,buff ,-offset);
-  if(result==-1){
+  if(size-offset<0){
+    //Reached EOF
+    lseek(fd,0,SEEK_SET);//start of the file
+    offset=size;
+  }else{
+    //end of line
+    offset-=2;
+  }
+  char* buff = new char[offset];
+  int bytesRead = offset;
+    int bytesWrite = offset;
+  while(bytesRead>0){
+    int readb = read(fd,buff ,bytesRead);
+    if(readb==0) break;
+    if(readb==-1){
     perror("smash error: read failed");
     return;
   }
+    bytesRead-=readb;
+    buff+=readb;
+  }
   
-  result = write(1,buff,-offset);
-  if(result==-1){
-    perror("smash error: write failed");
+  buff-=bytesWrite;
+  while(bytesWrite>0){
+    int writtenBytes = write(1,buff ,bytesWrite);
+    if(writtenBytes==0){
+      break;
+    }
+        if(writtenBytes==-1){
+    perror("smash error: read failed");
     return;
+        }
+    bytesWrite-=writtenBytes;
+    buff+=writtenBytes;
+  
   }
  
 }
