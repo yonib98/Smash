@@ -164,7 +164,7 @@ AlarmEntry* SmallShell::popAlarm(){
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
-Command * SmallShell::CreateCommand(const char* cmd_line) {
+Command * SmallShell::CreateCommand(const char* cmd_line, std::string sent_from_timeout) {
 	// For example:
 
   string cmd_s = _trim(string(cmd_line));
@@ -220,7 +220,7 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
   }
  // .....
   else {
-    return new ExternalCommand(cmd_line);
+    return new ExternalCommand(cmd_line, sent_from_timeout);
   }
   
   return nullptr;
@@ -266,7 +266,8 @@ Command::Command(const char* cmd_line): cmd_line(cmd_line){}
 
 BuiltInCommand::BuiltInCommand(const char* cmd_line): Command(cmd_line) {};
 
-ExternalCommand::ExternalCommand(const char* cmd_line,AlarmEntry* alarm): Command(cmd_line), alarm(alarm) {
+ExternalCommand::ExternalCommand(const char* cmd_line,std::string sent_from_timeout,AlarmEntry* alarm): Command(cmd_line),sent_from_timeout(sent_from_timeout), alarm(alarm) {
+  this->cmd_line= (sent_from_timeout.length()==0)? cmd_line: sent_from_timeout+ " " +this->cmd_line;
   argv = new char*[4];
   argv[0] = new char[20];
   argv[1]= new char[3];
@@ -502,10 +503,11 @@ TouchCommand::TouchCommand(const char* cmd_line): BuiltInCommand(cmd_line){
   int times[6];
   int i=0;
   while(std::getline(iss,tmp,':')){
-    times[i]=atoi(tmp.c_str());
-//    if(times[i]==0){
-//      throw InvalidArgs(args[0]);
-//    }
+    char* end;
+    times[i]=strtol(tmp.c_str(), &end, 10);
+    if(tmp.c_str()==end){
+     throw InvalidArgs(args[0]);
+   }
     i++;
   }
   tm temp={0};
@@ -526,11 +528,13 @@ TailCommand::TailCommand(const char* cmd_line): BuiltInCommand(cmd_line){
     lines=10;
   }
   else if (len==3){
-    try{
-    lines = atoi(args[1]);
-    lines=lines*-1;
+    char* end;
+    lines = strtol(args[1], &end, 10);
+    if(args[1]==end){
+      throw InvalidArgs(args[0]);
     }
-    catch (std::exception& e){
+    lines=lines*-1;
+    if(lines<0){
       throw InvalidArgs(args[0]);
     }
     filename = args[2];
@@ -546,10 +550,17 @@ TimeoutCommand::TimeoutCommand(const char* cmd_line): BuiltInCommand(cmd_line){
   char** args = new char*[COMMAND_MAX_ARGS];
   int len =_parseCommandLine(cmd_line,args);
 //Add exceptions
-  duration = atoi(args[1]);
+  char* end;
+  duration = strtol(args[1], &end, 10);
+  if(args[1]==end){
+    throw InvalidArgs(args[0]);
+  }
   command_to_execute=cmd_line;
   SmallShell& shell = SmallShell::getInstance();
-  command = shell.CreateCommand(cmd_line+strlen(args[0])+strlen(args[1])+2);
+  std::string to_send= args[0];
+  to_send+= " ";
+  to_send+=to_string(duration);
+  command = shell.CreateCommand(cmd_line+strlen(args[0])+strlen(args[1])+2, to_send);
 
   delete [] args;
 }

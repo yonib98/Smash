@@ -55,9 +55,10 @@ class BuiltInCommand : public Command {
 class ExternalCommand : public Command {
   char** argv;
   bool background;
+  std::string sent_from_timeout;
   AlarmEntry* alarm;
  public:
-  ExternalCommand(const char* cmd_line, AlarmEntry* alarm=nullptr);
+  ExternalCommand(const char* cmd_line,std::string sent_from_timeout="", AlarmEntry* alarm=nullptr);
   virtual ~ExternalCommand();
   void execute() override;
   void setAlarm(AlarmEntry* alarm) {this->alarm=alarm;};
@@ -252,7 +253,7 @@ class SmallShell {
   std::vector<AlarmEntry*> alarms;
   SmallShell();
  public:
-  Command *CreateCommand(const char* cmd_line);
+  Command *CreateCommand(const char* cmd_line, std::string sent_from_timeout="");
   SmallShell(SmallShell const&)      = delete; // disable copy ctor
   void operator=(SmallShell const&)  = delete; // disable = operator
   static SmallShell& getInstance() // make SmallShell singleton
