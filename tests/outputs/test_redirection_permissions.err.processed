@@ -1,4 +1,0 @@
-smash error: open failed: No such file or directory
-stat: cannot stat 'b.txt': No such file or directory
-smash error: dup failed: Bad file descriptor
-stat: cannot stat 'b.txt': No such file or directory
