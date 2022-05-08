@@ -228,8 +228,8 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
 
 void SmallShell::executeCommand(const char *cmd_line) {
   try{
-    Command* cmd = CreateCommand(cmd_line);
     jobs->removeFinishedJobs();
+    Command* cmd = CreateCommand(cmd_line);
     cmd->execute();
     delete cmd;
   }
@@ -338,7 +338,7 @@ ForegroundCommand::ForegroundCommand(const char* cmd_line, JobsList* jobs): Buil
     }
     else if(len==2){
       job_id = atoi(args[1]);
-      if(job_id<=0){
+      if(job_id==0){
         throw InvalidArgs(args[0]);
       }
       typename JobsList::JobEntry* job =  jobs->getJobById(job_id);
@@ -461,7 +461,7 @@ RedirectionCommand::RedirectionCommand(const char* cmd_line, bool append): Comma
   else{
     flags= O_WRONLY | O_CREAT | O_TRUNC;
   }
-  mode= S_IRUSR | S_IWUSR;
+  mode= 0655;
 }
 
 PipeCommand::PipeCommand(const char* cmd_line, bool redirect_errors): Command(cmd_line), redirect_errors(redirect_errors){
@@ -621,6 +621,9 @@ void ForegroundCommand::execute(){
   smash.setRunningProcess(cmd);
   int status;
   int success_sys=waitpid(pid,&status,WUNTRACED);
+  if(WIFEXITED(status)|| WIFSIGNALED(status)){
+    smash.getJobById(job_id)->isFinished=true;
+  }
   if(success_sys==-1){
     perror("smash error: waitpid failed");
     return;
@@ -691,7 +694,7 @@ void ExternalCommand::execute(){
     smash.addJob(this->cmd_line,pid,false,true);
     int status;
     int success_sys=waitpid(pid,&status,WUNTRACED);
-    if(WIFEXITED(status)){
+    if(WIFEXITED(status) || WIFSIGNALED(status)){
       smash.getJobById(-1)->isFinished=true;
     }
     if(success_sys==-1){
