@@ -878,6 +878,17 @@ void TailCommand::execute(){
     perror("smash error: open failed");
     return;
   }
+  //Check if diretory
+  char test[0];
+  int res = read(fd,test,1);
+  if(res==-1){
+    perror("smash error: read failed");
+    return;
+  }
+  if(fd==-1){
+    perror("smash error: open failed");
+    return;
+  }
   int offset = 0;
   int size = lseek(fd,offset,SEEK_END);
   if(size==0){

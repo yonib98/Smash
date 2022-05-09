@@ -1,4 +1,4 @@
 smash> smash: got ctrl-Z
-smash: process 31662 was stopped
+smash: process 8857 was stopped
 smash> hello> hello> hello> hello> smash> smash> smash> smash: sending SIGKILL signal to 1 jobs:
-31662: sleep 1
+8857: sleep 1
