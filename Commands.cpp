@@ -876,7 +876,6 @@ void TailCommand::execute(){
   int fd = open(filename.c_str(),flags);
   if(fd==-1){
     perror("smash error: open failed");
-    return;
   }
   //Check if diretory
   char test[0];
