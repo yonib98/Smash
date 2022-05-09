@@ -50,15 +50,13 @@ void alarmHandler(int sig_num) {
   SmallShell& smash = SmallShell::getInstance();
   AlarmEntry* timeout_alarm = smash.popAlarm();
   
-  std::cout << "smash: " << timeout_alarm->getCommandToExecute() << " timed out!" << std::endl;
-  if(timeout_alarm->getPid()==0){
-    return;
-  }
+  smash.jobs->removeFinishedJobs();
   int success_sys = kill(timeout_alarm->getPid(),SIGKILL);
     if(success_sys==-1){
-      perror("smash error: kill failed");
+     // perror("smash error: kill failed");
       return;
     }
+      std::cout << "smash: " << timeout_alarm->getCommandToExecute() << " timed out!" << std::endl;
       delete timeout_alarm;
 }
 

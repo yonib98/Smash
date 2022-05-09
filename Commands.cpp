@@ -549,10 +549,13 @@ TailCommand::TailCommand(const char* cmd_line): BuiltInCommand(cmd_line){
 TimeoutCommand::TimeoutCommand(const char* cmd_line): BuiltInCommand(cmd_line){
   char** args = new char*[COMMAND_MAX_ARGS];
   int len =_parseCommandLine(cmd_line,args);
+  if(len<3){
+    throw InvalidArgs(args[0]);
+  }
 //Add exceptions
   char* end;
   duration = strtol(args[1], &end, 10);
-  if(args[1]==end){
+  if(args[1]==end || duration<0){
     throw InvalidArgs(args[0]);
   }
   command_to_execute=cmd_line;
@@ -715,9 +718,6 @@ void ExternalCommand::execute(){
     if(WIFEXITED(status) || WIFSIGNALED(status)){
       smash.getJobById(-1)->isFinished=true;
     }
-    if(alarm!=nullptr){
-      alarm->pid=0;
-    }
     if(success_sys==-1){
       perror("smash error: waitpid failed");
       return;
@@ -746,6 +746,7 @@ void RedirectionCommand::execute(){
   }
   int fd= open(filename.c_str(),flags,mode);//opens to
   if(fd==-1){
+    dup(tmp_stdout);
     perror("smash error: open failed");
     return;
   }

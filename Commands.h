@@ -262,6 +262,7 @@ class SmallShell {
     // Instantiated on first use.
     return instance;
   }
+  friend void alarmHandler(int signum);
   ~SmallShell();
   void executeCommand(const char* cmd_line);
   void setPrompt(std::string prompt);

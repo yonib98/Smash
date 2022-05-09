@@ -3,22 +3,5 @@ cat: k: No such file or directory
 smash error: kill: invalid arguments
 cat: t: No such file or directory
 smash error: open failed: No such file or directory
-smash error: dup failed: Bad file descriptor
-/bin/bash: line 0: echo: write error: Bad file descriptor
-cat: standard output: Bad file descriptor
-smash error: dup failed: Bad file descriptor
-ls: write error: Bad file descriptor
-smash error: dup failed: Bad file descriptor
-cat: standard output: Bad file descriptor
-ls: write error: Bad file descriptor
-rm: cannot remove 'new': No such file or directory
-smash error: dup failed: Bad file descriptor
-cat: standard output: Bad file descriptor
-ls: write error: Bad file descriptor
-rm: cannot remove 'new': No such file or directory
-smash error: dup failed: Bad file descriptor
-cat: standard output: Bad file descriptor
-smash error: dup failed: Bad file descriptor
-cat: standard output: Bad file descriptor
-smash error: dup failed: Bad file descriptor
-cat: standard output: Bad file descriptor
+smash error: open failed: No such file or directory
+smash error: open failed: Permission denied

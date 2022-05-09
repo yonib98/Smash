@@ -20,4 +20,39 @@ smash> mypid
 new
 p
 s
-smash> 
+smash> smash> smash> before
+smash> again_redirect
+test_redirect
+smash> smash> smash> smash> mypid
+p
+s
+smash> smash> mypid
+new
+p
+s
+smash> mypid
+new
+p
+s
+smash> smash> smash> mypid
+new
+p
+s
+smash> mypid
+new
+p
+s
+smash> smash> smash> mypid
+new
+p
+s
+smash> smash> smash> mypid
+new
+p
+s
+test
+smash> smash> 0
+2
+end: 4
+smash> smash> smash> smash: sending SIGKILL signal to 1 jobs:
+2: sleep 100&
