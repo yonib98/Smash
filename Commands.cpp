@@ -203,7 +203,7 @@ Command * SmallShell::CreateCommand(const char* cmd_line, std::string sent_from_
   else if(firstWord.compare("bg") == 0 || firstWord.compare("bg&") == 0){
     return new BackgroundCommand(cmd_line,jobs);
   }
-  else if (firstWord.compare("kill")==0 || firstWord.compare("kill&")==0){
+  else if (firstWord.compare("kill")==0){
     return new KillCommand(cmd_line,jobs);
   }
   else if (firstWord.compare("quit")==0 || firstWord.compare("quit&")==0){
@@ -215,7 +215,7 @@ Command * SmallShell::CreateCommand(const char* cmd_line, std::string sent_from_
   else if (firstWord.compare("tail")==0 || firstWord.compare("tail&")==0){
     return new TailCommand(cmd_line);
   }
-  else if (firstWord.compare("timeout")==0 || firstWord.compare("timeout&") == 0){
+  else if (firstWord.compare("timeout")==0){
     return new TimeoutCommand(cmd_line);
   }
  // .....
@@ -289,10 +289,12 @@ ExternalCommand::ExternalCommand(const char* cmd_line,std::string sent_from_time
 ChangeDirCommand::ChangeDirCommand (const char* cmd_line, char** plastPwd): BuiltInCommand(cmd_line), plastPwd(plastPwd){
   char** args = new char*[COMMAND_MAX_ARGS];
   int len =_parseCommandLine(cmd_line,args);
-  if(len>2){
+  _removeBackgroundSign(args[0]);
+  if(len>2 || len==1){
     throw CDTooManyArguments();
   }
   else{
+    _removeBackgroundSign(args[1]);
     char* path = args[1];
     if(strcmp(path,"-")==0){
       if(*plastPwd==nullptr){
@@ -338,6 +340,7 @@ ForegroundCommand::ForegroundCommand(const char* cmd_line, JobsList* jobs): Buil
       smash.setRunningJobId(job->job_id);
     }
     else if(len==2){
+      _removeBackgroundSign(args[1]);
       job_id = atoi(args[1]);
       if(job_id==0){
         throw InvalidArgs(args[0]);
@@ -378,6 +381,7 @@ BackgroundCommand::BackgroundCommand(const char* cmd_line,JobsList* jobs): Built
       job->isStopped=false;   
     }
     else if (len==2){
+      _removeBackgroundSign(args[1]);
       job_id = atoi(args[1]);
       if(job_id==0){
         throw InvalidArgs(args[0]);
@@ -412,6 +416,7 @@ KillCommand::KillCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(c
   if(len!=3){
     throw InvalidArgs(args[0]);
   }
+  _removeBackgroundSign(args[2]);
   int job_id = atoi(args[2]);
   if(job_id==0){
         throw InvalidArgs(args[0]);
@@ -438,7 +443,8 @@ KillCommand::KillCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(c
 QuitCommand::QuitCommand(const char* cmd_line,JobsList* jobs): BuiltInCommand(cmd_line), jobs(jobs){
   char** args = new char*[COMMAND_MAX_ARGS];
   int len =_parseCommandLine(cmd_line,args);
-  if(len==1 || strcmp(args[1],"kill")!=0){
+  _removeBackgroundSign(args[0]);
+  if(len==1 || (strcmp(args[1],"kill")!=0 && strcmp(args[1],"kill&")!=0 )){
     killAll=false;
   }else{
     killAll=true;
@@ -494,6 +500,7 @@ TouchCommand::TouchCommand(const char* cmd_line): BuiltInCommand(cmd_line){
   if(len!=3){
     throw InvalidArgs(args[0]);
   }
+  _removeBackgroundSign(args[2]);
   filename = args[1];
   std::string given_time = args[2];
   std::istringstream iss = std::istringstream(args[2]);
@@ -519,13 +526,15 @@ TouchCommand::TouchCommand(const char* cmd_line): BuiltInCommand(cmd_line){
   delete args;
 }
 TailCommand::TailCommand(const char* cmd_line): BuiltInCommand(cmd_line){
-    char** args = new char*[COMMAND_MAX_ARGS];
+  char** args = new char*[COMMAND_MAX_ARGS];
   int len =_parseCommandLine(cmd_line,args);
   if(len==2){
+    _removeBackgroundSign(args[1]);
     filename = args[1];
     lines=10;
   }
   else if (len==3){
+    _removeBackgroundSign(args[2]);
     char* end;
     lines = strtol(args[1], &end, 10);
     if(args[1]==end){
