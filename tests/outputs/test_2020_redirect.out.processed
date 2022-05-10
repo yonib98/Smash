@@ -9,47 +9,67 @@ smash> smash> smash pid is 1
 smash> mypid
 new
 smash> smash> smash> [1] sleep 100& : 2 X secs
-smash> smash> smash> smash> smash> mypid
+smash> smash> smash> smash> smash> k
+mypid
 new
 s
-smash> smash> mypid
+t
+smash> smash> k
+mypid
 new
 p
 s
-smash> mypid
+t
+smash> k
+mypid
 new
 p
 s
+t
 smash> smash> smash> before
 smash> again_redirect
 test_redirect
-smash> smash> smash> smash> mypid
+smash> smash> smash> smash> k
+mypid
 p
 s
-smash> smash> mypid
+t
+smash> smash> k
+mypid
 new
 p
 s
-smash> mypid
+t
+smash> k
+mypid
 new
 p
 s
-smash> smash> smash> mypid
+t
+smash> smash> smash> k
+mypid
 new
 p
 s
-smash> mypid
+t
+smash> k
+mypid
 new
 p
 s
-smash> smash> smash> mypid
+t
+smash> smash> smash> k
+mypid
 new
 p
 s
-smash> smash> smash> mypid
+t
+smash> smash> smash> k
+mypid
 new
 p
 s
+t
 test
 smash> smash> 0
 2

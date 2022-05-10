@@ -1,7 +1,5 @@
 smash error: kill: invalid arguments
-cat: k: No such file or directory
 smash error: kill: invalid arguments
-cat: t: No such file or directory
 smash error: open failed: No such file or directory
 smash error: open failed: No such file or directory
 smash error: open failed: Permission denied

@@ -446,10 +446,10 @@ QuitCommand::QuitCommand(const char* cmd_line,JobsList* jobs): BuiltInCommand(cm
   delete [] args;
 }
 
+
 //----Special I/O Commands----
 
 RedirectionCommand::RedirectionCommand(const char* cmd_line, bool append): Command(cmd_line),append(append){
-  std::string command_n;
   if(!append){
   std::string command_f = _trim(string(cmd_line));
   command_n =_trim(command_f.substr(0,command_f.find_first_of(">")));
@@ -460,8 +460,6 @@ RedirectionCommand::RedirectionCommand(const char* cmd_line, bool append): Comma
   command_n = _trim(command_f.substr(0,command_f.find_first_of(">>")));
   filename =_trim(command_f.substr(command_f.find_first_of(">>")+2,command_f.length()-1));
   }
-  SmallShell& shell= SmallShell::getInstance();
-  command= shell.CreateCommand(command_n.c_str());
   if(append){
     flags= O_WRONLY | O_APPEND | O_CREAT;
   }
@@ -734,6 +732,7 @@ void ExternalCommand::execute(){
 
 //-----------I/O------------
 void RedirectionCommand::execute(){
+
   int tmp_stdout = dup(1);
   if(tmp_stdout==-1){
     perror("smash error: dup failed");
@@ -747,11 +746,23 @@ void RedirectionCommand::execute(){
   int fd= open(filename.c_str(),flags,mode);//opens to
   if(fd==-1){
     dup(tmp_stdout);
+    close(tmp_stdout);
     perror("smash error: open failed");
     return;
   }
+
+  try{
+  SmallShell&  shell = SmallShell::getInstance();
+  Command* command = shell.CreateCommand(command_n.c_str());
   command->execute();
   delete command;
+  }
+  catch(std::exception& e){
+    close(1);
+    dup(tmp_stdout);
+    close(tmp_stdout);
+    throw;
+  }
   close_suc=close(1);
   if(close_suc==-1){
     perror("smash error: close failed");
@@ -876,6 +887,7 @@ void TailCommand::execute(){
   int fd = open(filename.c_str(),flags);
   if(fd==-1){
     perror("smash error: open failed");
+    return;
   }
   //Check if diretory
   char test[0];

@@ -76,10 +76,10 @@ class PipeCommand : public Command {
 
 class RedirectionCommand : public Command {
  bool append;
- Command* command;
  std::string filename;
  int flags;
  mode_t mode;
+ std::string command_n;
  public:
   explicit RedirectionCommand(const char* cmd_line, bool append);
   virtual ~RedirectionCommand() {}
