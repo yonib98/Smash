@@ -209,10 +209,10 @@ Command * SmallShell::CreateCommand(const char* cmd_line, std::string sent_from_
   else if (firstWord.compare("quit")==0 || firstWord.compare("quit&")==0){
    return new QuitCommand(cmd_line,jobs);
   }
-  else if (firstWord.compare("touch")==0 || firstWord.compare("touch&")==0){
+  else if (firstWord.compare("touch")==0){
     return new TouchCommand(cmd_line);
   }
-  else if (firstWord.compare("tail")==0 || firstWord.compare("tail&")==0){
+  else if (firstWord.compare("tail")==0){
     return new TailCommand(cmd_line);
   }
   else if (firstWord.compare("timeout")==0){

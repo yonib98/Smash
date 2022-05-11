@@ -137,13 +137,13 @@ class JobsList {
   class JobEntry {
     public:
     std::string cmd_line;
+    time_t start_time;
     int job_id;
     int pid;
     bool isStopped;
     bool isFinished;
     bool FG;
-    time_t start_time;
-    JobEntry(std::string cmd_line, time_t start_time, int job_id,int pid, bool isStopped=false,bool FG=false): cmd_line(cmd_line), job_id(job_id),pid(pid), isStopped(isStopped), isFinished(false), start_time(start_time),FG(FG) {};
+    JobEntry(std::string cmd_line, time_t start_time, int job_id,int pid, bool isStopped=false,bool FG=false): cmd_line(cmd_line), start_time(start_time), job_id(job_id),pid(pid), isStopped(isStopped), isFinished(false), FG(FG) {};
     friend class JobsList;
     friend class ForegroundCommand;
     friend class BackgroundCommand;
